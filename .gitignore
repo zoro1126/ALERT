@@ -1,1 +1,4 @@
 .venv/
+face_landmarker.task
+*.pyc
+__pycache__/
