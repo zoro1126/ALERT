@@ -1,4 +1,5 @@
 .venv/
 face_landmarker.task
+fatigue_classifier.joblib
 *.pyc
 __pycache__/

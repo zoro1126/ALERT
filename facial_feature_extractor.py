@@ -261,22 +261,28 @@ class FacialFeatureExtractor:
                 self.face_mesh.close()
 
 
-def open_webcam(indices: List[int] = [0, 1, 2, 3, -1]) -> Tuple[Optional[cv2.VideoCapture], int]:
+def open_webcam(indices: List[int] = [1, 0, 2, 3, -1]) -> Tuple[Optional[cv2.VideoCapture], int]:
     """
     Scans available camera indices to locate and open the active camera stream.
-    On many Linux laptops, /dev/video0 is an IR/metadata node, while /dev/video1 or 2 is the RGB stream.
+    Prioritizes index 1 for Linux laptops where /dev/video0 is an IR node and /dev/video1 is the RGB sensor.
+    Configures 30 FPS MJPG stream properties for high-performance real-time video processing.
 
     Returns:
         Tuple of (cv2.VideoCapture object, opened_index). Returns (None, -1) if no camera found.
     """
     for idx in indices:
-        # Try V4L2 backend first (standard for Linux), then default backend
         for backend in [cv2.CAP_V4L2, cv2.CAP_ANY]:
             cap = cv2.VideoCapture(idx, backend)
             if cap.isOpened():
+                # Set 30 FPS MJPG mode
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                cap.set(cv2.CAP_PROP_FPS, 30)
+
                 ret, frame = cap.read()
                 if ret and frame is not None and frame.size > 0:
-                    print(f"[INFO] Successfully connected to webcam at index {idx} ({frame.shape[1]}x{frame.shape[0]}).")
+                    print(f"[INFO] Successfully connected to webcam at index {idx} ({frame.shape[1]}x{frame.shape[0]} @ 30 FPS).")
                     return cap, idx
                 cap.release()
     return None, -1
