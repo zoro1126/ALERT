@@ -5,8 +5,9 @@
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-Tasks%20API-orange.svg)](https://ai.google.dev/edge/mediapipe/solutions/guide)
 [![Execution](https://img.shields.io/badge/Inference-100%25%20Offline%20Edge-brightgreen.svg)]()
 
-> **Project Status: Proof of Concept (POC)**  
-> This repository currently contains the **Proof of Concept (POC)** pipeline for the **ALERT** system. Full production software development will begin shortly. The architecture is engineered to be fully coherent with a **100% offline, low-latency (<15ms per frame) edge device implementation**.
+> [!IMPORTANT]
+> **Project Status: Pre-Development Stage (Proof of Concept Only)**  
+> This project is currently in the **Pre-Development Stage**. At present, **only the Proof of Concept (POC)** pipeline has been built and demonstrated. Full system features, production-grade edge deployment modules, hardware integrations, and full-scale dataset models will be implemented in future development phases. The current codebase serves as a functional architectural prototype engineered to be coherent with a future **100% offline, low-latency (<15ms per frame) edge implementation**.
 
 ---
 
@@ -30,20 +31,22 @@ Unlike basic single-threshold blink counters, ALERT computes a multi-channel fea
 
 ---
 
-## 🎯 Core Features & Capabilities
+## 🎯 Feature Roadmap & POC Capabilities
 
-1. **3D Facial Landmark Tracking:**
+> *Note: The items below describe the system architecture and features. Currently, only the core algorithmic POC is built (`POC/` directory). Full-scale feature implementations and production integrations will be rolled out in future releases.*
+
+1. **3D Facial Landmark Tracking (Built in POC):**
    - Powered by Google MediaPipe Tasks API (`FaceLandmarker`) tracking 468 3D landmark coordinates in real-time.
-2. **Personalized 10-Second Baseline Calibration:**
+2. **Personalized 10-Second Baseline Calibration (Built in POC):**
    - Eliminates false alarms caused by natural variations in eye shape (e.g., monolids vs. double eyelids).
    - Collects baseline statistics ($\mu_{\text{EAR}}, \sigma_{\text{EAR}}$) during the first 10 seconds of driving to calculate custom thresholds:
      $$\text{EAR}_{\text{threshold}} = \mu_{\text{EAR}} - 1.5\sigma_{\text{EAR}}$$
    - Features slow Exponential Moving Average (EMA) drift adaptation for long drives.
-3. **Perspective Head-Pose Correction:**
+3. **Perspective Head-Pose Correction (Built in POC):**
    - Solves the 3D Perspective-n-Point (solvePnP) problem to extract **Pitch, Yaw, and Roll** Euler angles.
    - Automatically corrects foreshortening when the driver turns their head:
      $$\text{EAR}_{\text{corrected}} = \frac{\text{EAR}_{\text{raw}}}{\cos(|\text{yaw}|)}$$
-4. **9-Dimensional Feature Universe ($F_1 - F_9$):**
+4. **9-Dimensional Feature Universe ($F_1 - F_9$ - Built in POC):**
    - **$F_1$ (EAR):** Instantaneous Eye Aspect Ratio.
    - **$F_2$ (EAR_std):** Rolling 5s standard deviation.
    - **$F_3$ (PERCLOS):** % of frames eyes are closed over a rolling 60s window.
@@ -53,12 +56,17 @@ Unlike basic single-threshold blink counters, ALERT computes a multi-channel fea
    - **$F_7$ (Yawn Count):** Yawn events detected in rolling 5-minute window.
    - **$F_8$ (Head Pitch):** Nodding/drooping angle.
    - **$F_9$ (MOE):** Composite Mouth-Over-Eye ratio ($\text{MAR} / \text{EAR}$).
-5. **Multiclass ML Fatigue Level Grading:**
+5. **Multiclass ML Fatigue Level Grading (Built in POC):**
    - Classifies driver state according to Wierwille-Ellsworth standards:
      - **L0 Alert:** Normal alertness, eyes open, no yawning.
      - **L1 Mild Fatigue:** Occasional slow blinks, minor MAR elevation.
      - **L2 Moderate Fatigue:** High PERCLOS (25-40%), repeated yawning, early head drooping.
      - **L3 Severe Fatigue:** Prolonged eye closures (>40% PERCLOS), micro-sleeps, critical alarms.
+6. **Future Features (Upcoming Releases):**
+   - **Near-Infrared (NIR 940nm) Active Illumination Stack** for complete zero-light night driving support.
+   - **Dual-Wavelength NIR Eyewear Detection** for heavy sunglasses occlusion bypass.
+   - **C++ / TensorRT Embedded Engine** for sub-5ms microcontroller & Jetson Orin deployment.
+   - **CAN Bus / Vehicle Fleet Telemetry Integration** for automated fleet manager warning dispatch.
 
 ---
 
