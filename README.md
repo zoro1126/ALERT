@@ -1,20 +1,20 @@
-# DMS Vigil-AI: Driver Fatigue & Drowsiness Detection System
+# ALERT: Automated Landmark based Eye and Response Tracker
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https.python.org)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.8%2B-green.svg)](https://opencv.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-Tasks%20API-orange.svg)](https://ai.google.dev/edge/mediapipe/solutions/guide)
 [![Execution](https://img.shields.io/badge/Inference-100%25%20Offline%20Edge-brightgreen.svg)]()
 
 > **Project Status: Proof of Concept (POC)**  
-> This repository currently contains the **Proof of Concept (POC)** pipeline for real-time driver fatigue detection. Full production software development will begin shortly. The architecture is engineered to be fully coherent with a **100% offline, low-latency (<15ms per frame) edge device implementation**.
+> This repository currently contains the **Proof of Concept (POC)** pipeline for the **ALERT** system. Full production software development will begin shortly. The architecture is engineered to be fully coherent with a **100% offline, low-latency (<15ms per frame) edge device implementation**.
 
 ---
 
 ## 📌 Executive Summary
 
-**DMS Vigil-AI** is a non-intrusive Driver Monitoring System (DMS) that analyzes real-time facial behavior to detect early, moderate, and severe driver fatigue.
+**ALERT** (**A**utomated **L**andmark based **E**ye and **R**esponse **T**racker) is a non-intrusive Driver Monitoring System (DMS) that analyzes real-time facial behavior to detect early, moderate, and severe driver fatigue.
 
-Unlike basic single-threshold blink counters, Vigil-AI computes a multi-channel feature vector ($F_1 \dots F_9$) combining geometric eye/mouth ratios, temporal rolling windows (PERCLOS, blink duration, yawn frequency), and 3D head pose estimation. These features feed into a trained classical Machine Learning model (Random Forest / XGBoost) to classify driver state into **4 fatigue levels (L0 to L3)** with confidence probabilities.
+Unlike basic single-threshold blink counters, ALERT computes a multi-channel feature vector ($F_1 \dots F_9$) combining geometric eye/mouth ratios, temporal rolling windows (PERCLOS, blink duration, yawn frequency), and 3D head pose estimation. These features feed into a trained classical Machine Learning model (Random Forest / XGBoost) to classify driver state into **4 fatigue levels (L0 to L3)** with confidence probabilities.
 
 ```
 ┌─────────────────────────┐     ┌────────────────────────────┐     ┌─────────────────────────────┐
@@ -130,7 +130,7 @@ python3 POC/orchestrator.py
 ```
 
 #### What to Expect on Screen:
-* **Top Header:** Live stream FPS (optimized for 30 FPS playback) & tracking status.
+* **Top Header:** Live stream FPS (optimized for 30 FPS playback) & `ALERT SYSTEM | FPS: 30.0` status.
 * **First 10 Seconds:** Calibration timer progress bar (`CALIBRATING BASELINE: X.Xs`). Look forward at the camera during this period.
 * **Landmark Overlay:** Real-time green dots on eyes and orange dots on lips.
 * **Signal Panel:** Real-time values for EAR, MAR, MOE, PERCLOS %, Blink Rate, Head Pitch, and Yawn Count.
@@ -161,4 +161,4 @@ The POC software pipeline is intentionally designed for direct translation to lo
 
 Refer to [`research/cited-resources.md`](file:///home/prem/Desktop/projects/driver-fatigue-detection/research/cited-resources.md) for academic citations (Soukupová & Čech, Wierwille PERCLOS, MediaPipe, NTHU-DDD, UTA-RLDD).
 
-*DMS Vigil-AI — Developed for Advanced Driver Safety & Fleet Protection.*
+*ALERT — Automated Landmark based Eye and Response Tracker.*

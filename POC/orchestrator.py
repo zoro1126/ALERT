@@ -74,7 +74,7 @@ class FatigueDetectionOrchestrator:
         # FPS & System Status Header
         status_color = (0, 255, 0) if metrics else (0, 0, 255)
         status_text = "TRACKING: ACTIVE" if metrics else "SEARCHING FOR DRIVER..."
-        cv2.putText(frame, f"DMS VIGIL-AI | FPS: {self.current_fps:.1f}", (15, 25),
+        cv2.putText(frame, f"ALERT DMS | FPS: {self.current_fps:.1f}", (15, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         cv2.putText(frame, status_text, (w - 230, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, status_color, 2)
@@ -215,8 +215,8 @@ class FatigueDetectionOrchestrator:
             return
 
         try:
-            cv2.namedWindow("Driver Fatigue Detection System (ML Powered)", cv2.WINDOW_NORMAL)
-            print(f"[INFO] Camera stream active (Device Index {cam_idx}). Displaying HUD at 30 FPS...")
+            cv2.namedWindow("ALERT: Automated Landmark based Eye and Response Tracker", cv2.WINDOW_NORMAL)
+            print(f"[INFO] Camera stream active (Device Index {cam_idx}). Displaying ALERT HUD at 30 FPS...")
 
             while cap.isOpened():
                 ret, frame = cap.read()
