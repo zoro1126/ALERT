@@ -3,3 +3,5 @@ face_landmarker.task
 fatigue_classifier.joblib
 *.pyc
 __pycache__/
+uta-reallife-drowsiness-dataset.zip
+uta-reallife-drowsiness-dataset/
