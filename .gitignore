@@ -5,3 +5,5 @@ fatigue_classifier.joblib
 __pycache__/
 uta-reallife-drowsiness-dataset.zip
 uta-reallife-drowsiness-dataset/
+node_modules
+research
