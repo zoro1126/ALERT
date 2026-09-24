@@ -1,3 +1,6 @@
+
+
+Readme · MD
 # ALERT: Automated Landmark based Eye and Response Tracker
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
@@ -11,7 +14,7 @@
 
 ---
 
-## 📌 Executive Summary
+## Executive Summary
 
 **ALERT** (**A**utomated **L**andmark based **E**ye and **R**esponse **T**racker) is a non-intrusive Driver Monitoring System (DMS) that analyzes real-time facial behavior to detect early, moderate, and severe driver fatigue.
 
@@ -31,7 +34,7 @@ Unlike basic single-threshold blink counters, ALERT computes a multi-channel fea
 
 ---
 
-## 🎯 Feature Roadmap & POC Capabilities
+## Feature Roadmap & POC Capabilities
 
 > *Note: The items below describe the system architecture and features. Currently, only the core algorithmic POC is built (`POC/` directory). Full-scale feature implementations and production integrations will be rolled out in future releases.*
 
@@ -70,7 +73,7 @@ Unlike basic single-threshold blink counters, ALERT computes a multi-channel fea
 
 ---
 
-## 📊 Training Dataset & Benchmarks
+## Training Dataset & Benchmarks
 
 The machine learning classifier is benchmarked against:
 * **UTA-RLDD (University of Texas at Arlington Real-Life Drowsiness Dataset):** Real-world webcam footage of 60 subjects under naturalistic in-cabin conditions (`uta-reallife-drowsiness-dataset.zip`).
@@ -80,7 +83,7 @@ Comprehensive research documentation, mathematical models, lighting robustness s
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 driver-fatigue-detection/
@@ -101,7 +104,7 @@ driver-fatigue-detection/
 
 ---
 
-## ⚡ Instructions to Run the POC
+## Instructions to Run the POC
 
 ### 1. Prerequisites & Environment Setup
 
@@ -148,7 +151,7 @@ python3 POC/orchestrator.py
 
 ---
 
-## ⚙️ Architecture & Edge Deployment Roadmap
+## Architecture & Edge Deployment Roadmap
 
 The POC software pipeline is intentionally designed for direct translation to low-power edge hardware without cloud dependencies:
 
@@ -165,8 +168,17 @@ The POC software pipeline is intentionally designed for direct translation to lo
 
 ---
 
-## 📜 License & Citation
+## License & Citation
 
 Refer to [`research/cited-resources.md`](file:///home/prem/Desktop/projects/driver-fatigue-detection/research/cited-resources.md) for academic citations (Soukupová & Čech, Wierwille PERCLOS, MediaPipe, NTHU-DDD, UTA-RLDD).
 
-*ALERT — Automated Landmark based Eye and Response Tracker.*
+*ALERT - Automated Landmark based Eye and Response Tracker.*
+ 
+---
+ 
+## Authors
+ 
+- Kavya Kothari [k-is-sick](https://github.com/k-is-sick)
+- Prem Deshani [zoro1126](https://github.com/zoro1126)
+- Mehulsinh Rathod
+ 
