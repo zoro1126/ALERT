@@ -38,6 +38,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 
 from core.model import FatigueClassifier
+from training.augment import AugmentedWindowDataset
 from utils.config import Config
 
 
@@ -196,8 +197,10 @@ def train(
     val_ds   = CachedWindowDataset(val_files)
     print(f"Train windows : {len(train_ds)} | Val windows: {len(val_ds)}")
 
-    train_loader = _make_loader(train_ds, batch_size, shuffle=True, balance=True)
-    val_loader   = _make_loader(val_ds,   batch_size, shuffle=False)
+    # Wrap training set with on-the-fly augmentations; val stays clean
+    aug_train_ds = AugmentedWindowDataset(train_ds)
+    train_loader = _make_loader(aug_train_ds, batch_size, shuffle=True, balance=True)
+    val_loader   = _make_loader(val_ds,       batch_size, shuffle=False)
 
     # --- Model ---
     torch.manual_seed(Config.RANDOM_SEED)
