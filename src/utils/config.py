@@ -94,11 +94,11 @@ class Config:
     # ------------------------------------------------------------------ #
     # Training                                                             #
     # ------------------------------------------------------------------ #
-    BATCH_SIZE: int = 64
+    BATCH_SIZE: int = 128
     LR: float = 1e-3
     WEIGHT_DECAY: float = 1e-4
-    MAX_EPOCHS: int = 100
-    PATIENCE: int = 10          # early stopping on val macro-F1
+    MAX_EPOCHS: int = 50
+    PATIENCE: int = 20          # early stopping on val macro-F1
     COSINE_T_MAX: int = 50      # CosineAnnealingLR period
 
     # ------------------------------------------------------------------ #
