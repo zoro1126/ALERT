@@ -105,8 +105,9 @@ def time_warp(
     source_grid = np.clip(source_grid, 0, T - 1)
 
     # Interpolate each feature channel
+    orig_grid = np.arange(T, dtype=np.float32)
     warped = np.stack(
-        [np.interp(source_grid, orig_steps, window[:, f])
+        [np.interp(source_grid, orig_grid, window[:, f])
          for f in range(window.shape[1])],
         axis=1,
     ).astype(np.float32)

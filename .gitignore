@@ -14,7 +14,7 @@ uta-reallife-drowsiness-dataset.zip
 uta-reallife-drowsiness-dataset/
 
 # Generated files — keep dirs via .gitkeep
-cache/*.npz
+# cache/*.npz  (uncomment if cache should not be tracked; currently tracked for reproducibility)
 logs/*.json
 models/*.pt
 models/*.pth
