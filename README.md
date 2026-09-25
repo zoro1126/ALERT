@@ -1,184 +1,217 @@
+# ALERT — Adaptive Landmark Eye-state & Reaction-Time
 
+> **Real-time driver drowsiness detection · Software-only · CPU · <2 GB RAM**
 
-Readme · MD
-# ALERT: Automated Landmark based Eye and Response Tracker
-
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
-[![OpenCV](https://img.shields.io/badge/OpenCV-4.8%2B-green.svg)](https://opencv.org/)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-Tasks%20API-orange.svg)](https://ai.google.dev/edge/mediapipe/solutions/guide)
-[![Execution](https://img.shields.io/badge/Inference-100%25%20Offline%20Edge-brightgreen.svg)]()
-
-> [!IMPORTANT]
-> **Project Status: Pre-Development Stage (Proof of Concept Only)**  
-> This project is currently in the **Pre-Development Stage**. At present, **only the Proof of Concept (POC)** pipeline has been built and demonstrated. Full system features, production-grade edge deployment modules, hardware integrations, and full-scale dataset models will be implemented in future development phases. The current codebase serves as a functional architectural prototype engineered to be coherent with a future **100% offline, low-latency (<15ms per frame) edge implementation**.
+ALERT is a research-grade fatigue detection system built on MediaPipe FaceMesh and a BiGRU + Attention model trained on the UTA Real-Life Drowsiness Dataset. It runs entirely on CPU with a standard webcam and requires no EEG, CAN bus, or specialised hardware.
 
 ---
 
-## Executive Summary
-
-**ALERT** (**A**utomated **L**andmark based **E**ye and **R**esponse **T**racker) is a non-intrusive Driver Monitoring System (DMS) that analyzes real-time facial behavior to detect early, moderate, and severe driver fatigue.
-
-Unlike basic single-threshold blink counters, ALERT computes a multi-channel feature vector ($F_1 \dots F_9$) combining geometric eye/mouth ratios, temporal rolling windows (PERCLOS, blink duration, yawn frequency), and 3D head pose estimation. These features feed into a trained classical Machine Learning model (Random Forest / XGBoost) to classify driver state into **4 fatigue levels (L0 to L3)** with confidence probabilities.
+## Architecture
 
 ```
-┌─────────────────────────┐     ┌────────────────────────────┐     ┌─────────────────────────────┐
-│  Camera Video Stream    │ ──> │ Facial Feature Extractor   │ ──> │ Landmark Preprocessor       │
-│  (640x480 @ 30 FPS)     │     │ (MediaPipe 3D Landmarks)   │     │ (Smoothing, 10s Calibration)│
-└─────────────────────────┘     └────────────────────────────┘     └─────────────────────────────┘
-                                                                                  │
-┌─────────────────────────┐     ┌────────────────────────────┐                    ▼
-│ Real-Time HUD Window    │ <── │ ML Fatigue Classifier      │ <── 9-Dimensional Feature Vector
-│ (Live Predictions & L3) │     │ (L0 - L3 Multiclass RF)    │     (EAR, PERCLOS, MOE, Pitch...)
-└─────────────────────────┘     └────────────────────────────┘
-```
-
----
-
-## Feature Roadmap & POC Capabilities
-
-> *Note: The items below describe the system architecture and features. Currently, only the core algorithmic POC is built (`POC/` directory). Full-scale feature implementations and production integrations will be rolled out in future releases.*
-
-1. **3D Facial Landmark Tracking (Built in POC):**
-   - Powered by Google MediaPipe Tasks API (`FaceLandmarker`) tracking 468 3D landmark coordinates in real-time.
-2. **Personalized 10-Second Baseline Calibration (Built in POC):**
-   - Eliminates false alarms caused by natural variations in eye shape (e.g., monolids vs. double eyelids).
-   - Collects baseline statistics ($\mu_{\text{EAR}}, \sigma_{\text{EAR}}$) during the first 10 seconds of driving to calculate custom thresholds:
-     $$\text{EAR}_{\text{threshold}} = \mu_{\text{EAR}} - 1.5\sigma_{\text{EAR}}$$
-   - Features slow Exponential Moving Average (EMA) drift adaptation for long drives.
-3. **Perspective Head-Pose Correction (Built in POC):**
-   - Solves the 3D Perspective-n-Point (solvePnP) problem to extract **Pitch, Yaw, and Roll** Euler angles.
-   - Automatically corrects foreshortening when the driver turns their head:
-     $$\text{EAR}_{\text{corrected}} = \frac{\text{EAR}_{\text{raw}}}{\cos(|\text{yaw}|)}$$
-4. **9-Dimensional Feature Universe ($F_1 - F_9$ - Built in POC):**
-   - **$F_1$ (EAR):** Instantaneous Eye Aspect Ratio.
-   - **$F_2$ (EAR_std):** Rolling 5s standard deviation.
-   - **$F_3$ (PERCLOS):** % of frames eyes are closed over a rolling 60s window.
-   - **$F_4$ (Blink Rate):** Blinks per minute.
-   - **$F_5$ (Blink Duration):** Average blink duration in ms.
-   - **$F_6$ (MAR):** Mouth Aspect Ratio.
-   - **$F_7$ (Yawn Count):** Yawn events detected in rolling 5-minute window.
-   - **$F_8$ (Head Pitch):** Nodding/drooping angle.
-   - **$F_9$ (MOE):** Composite Mouth-Over-Eye ratio ($\text{MAR} / \text{EAR}$).
-5. **Multiclass ML Fatigue Level Grading (Built in POC):**
-   - Classifies driver state according to Wierwille-Ellsworth standards:
-     - **L0 Alert:** Normal alertness, eyes open, no yawning.
-     - **L1 Mild Fatigue:** Occasional slow blinks, minor MAR elevation.
-     - **L2 Moderate Fatigue:** High PERCLOS (25-40%), repeated yawning, early head drooping.
-     - **L3 Severe Fatigue:** Prolonged eye closures (>40% PERCLOS), micro-sleeps, critical alarms.
-6. **Future Features (Upcoming Releases):**
-   - **Near-Infrared (NIR 940nm) Active Illumination Stack** for complete zero-light night driving support.
-   - **Dual-Wavelength NIR Eyewear Detection** for heavy sunglasses occlusion bypass.
-   - **C++ / TensorRT Embedded Engine** for sub-5ms microcontroller & Jetson Orin deployment.
-   - **CAN Bus / Vehicle Fleet Telemetry Integration** for automated fleet manager warning dispatch.
-
----
-
-## Training Dataset & Benchmarks
-
-The machine learning classifier is benchmarked against:
-* **UTA-RLDD (University of Texas at Arlington Real-Life Drowsiness Dataset):** Real-world webcam footage of 60 subjects under naturalistic in-cabin conditions (`uta-reallife-drowsiness-dataset.zip`).
-* **NTHU-DDD (National Tsing Hua University):** Multi-condition benchmark for low-light NIR and eyewear occlusions.
-
-Comprehensive research documentation, mathematical models, lighting robustness stacks, and hardware architecture comparisons are detailed in [`research/driver-fatigue-detection-research.md`](file:///home/prem/Desktop/projects/driver-fatigue-detection/research/driver-fatigue-detection-research.md).
-
----
-
-## Repository Structure
-
-```
-driver-fatigue-detection/
-├── POC/                                # Proof of Concept Pipeline Code
-│   ├── facial_feature_extractor.py     # MediaPipe landmark tracking & head pose PnP
-│   ├── landmark_preprocessor.py        # Signal smoothing, baseline calibration & F1-F9 vector
-│   ├── model_classifier.py             # Trained ML model loader & micro-sleep overrides
-│   ├── train_model.py                  # Dataset generator & Random Forest / XGBoost trainer
-│   ├── orchestrator.py                 # Live webcam stream visualizer & HUD dashboard
-│   ├── requirements.txt                # Python dependencies
-│   └── fatigue_classifier.joblib       # Exported trained ML model weights
-├── research/                           # Academic & Systems Engineering Research
-│   ├── driver-fatigue-detection-research.md # Full 1,900-line research & math doc
-│   └── cited-resources.md              # 25+ indexed academic papers & datasets
-├── README.md                           # Project documentation
-└── .gitignore                          # Environment & model binary excludes
+Webcam frame (BGR)
+      │
+      ▼
+MediaPipe FaceLandmarker  (468-point FaceMesh, Tasks API)
+      │
+      ▼
+FeatureExtractor  ──────────────────────────────────────────────────
+  EAR_left · EAR_right · EAR_avg   (Soukupová & Čech 2016)
+  MAR                               (Mouth Aspect Ratio — yawn proxy)
+  PERCLOS                           (% frames eye closed in 60-frame window)
+  head_pitch · head_yaw             (cv2.solvePnP, 6-point PnP)
+  blink_rate                        (blinks/sec over rolling window)
+      │  (8 features per frame)
+      ▼
+RealTimeClassifier  — rolling deque (60 frames), infers every 15 frames
+      │
+      ▼
+FatigueClassifier (PyTorch)
+  BiGRU(64) → BiGRU(32) → TemporalAttention → Dense(64) → Dense(3)
+      │  (logits + attention weights)
+      ▼
+AlertManager  ──  NORMAL → WARNING → CRITICAL
+      │            + procedural audio tones (pygame)
+      ▼
+OpenCV HUD  — status bar, feature panel, prob bars, attention strip
 ```
 
 ---
 
-## Instructions to Run the POC
+## Directory Structure
 
-### 1. Prerequisites & Environment Setup
+```
+ALERT/
+├── src/
+│   ├── core/
+│   │   ├── feature_extractor.py   # EAR, MAR, PERCLOS, head pose, blink rate
+│   │   ├── model.py               # BiGRU + Attention (PyTorch)
+│   │   ├── classifier.py          # rolling window + real-time inference
+│   │   ├── calibrator.py          # adaptive EAR threshold calibration
+│   │   └── alert_manager.py       # state machine + audio
+│   ├── training/
+│   │   ├── dataset.py             # UTA-RLDD scanner + fold split
+│   │   ├── frame_extractor.py     # video → (N, 8) feature matrix
+│   │   ├── augment.py             # temporal augmentations
+│   │   ├── trainer.py             # training + validation loop
+│   │   └── evaluate.py            # confusion matrix + F1 report
+│   ├── ui/
+│   │   ├── overlay.py             # OpenCV HUD drawing functions
+│   │   └── dashboard.py           # main detection loop
+│   └── run_alert.py               # CLI entry point
+├── scripts/
+│   └── extract_cache.py           # batch feature extraction → .npz cache
+├── models/                        # saved .pt checkpoints (git-ignored)
+├── cache/                         # .npz window cache (git-ignored)
+├── logs/                          # training metrics + confusion matrix
+├── tests/
+│   ├── test_feature_extractor.py
+│   └── test_model.py
+├── requirements.txt
+└── setup.py
+```
 
-Clone the repository and set up a Python virtual environment:
+---
+
+## Setup
 
 ```bash
-cd driver-fatigue-detection
+# 1. Create and activate virtual environment
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+
+# 2. Install PyTorch (CPU build)
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# 3. Install remaining dependencies
+pip install -r requirements.txt
 ```
-
-Install the dependencies:
-
-```bash
-pip install -r POC/requirements.txt
-```
-
-### 2. Train / Verify the ML Classifier
-
-To retrain the high-speed Random Forest classifier (30 trees, sub-3ms inference latency):
-
-```bash
-python3 POC/train_model.py
-```
-
-*This generates `POC/fatigue_classifier.joblib` with 100% evaluated precision/recall on the benchmark feature matrix.*
-
-### 3. Run Live Real-Time Driver Monitoring HUD
-
-To launch the live webcam orchestration pipeline:
-
-```bash
-python3 POC/orchestrator.py
-```
-
-#### What to Expect on Screen:
-* **Top Header:** Live stream FPS (optimized for 30 FPS playback) & `ALERT SYSTEM | FPS: 30.0` status.
-* **First 10 Seconds:** Calibration timer progress bar (`CALIBRATING BASELINE: X.Xs`). Look forward at the camera during this period.
-* **Landmark Overlay:** Real-time green dots on eyes and orange dots on lips.
-* **Signal Panel:** Real-time values for EAR, MAR, MOE, PERCLOS %, Blink Rate, Head Pitch, and Yawn Count.
-* **Bottom Alert Banner:** Dynamic ML predicted class (`L0 Alert`, `L1 Mild`, `L2 Moderate`, `L3 Severe`), confidence %, and 4-class probability breakdown.
-
-*(Press `q` or `ESC` on the stream window to quit).*
 
 ---
 
-## Architecture & Edge Deployment Roadmap
+## Dataset
 
-The POC software pipeline is intentionally designed for direct translation to low-power edge hardware without cloud dependencies:
+Place the **UTA Real-Life Drowsiness Dataset** at:
 
-| Component | Target Hardware | Latency Target | Role |
-| :--- | :--- | :--- | :--- |
-| **High-End Edge** | NVIDIA Jetson Orin Nano / AGX | < 5 ms | Dual-camera NIR DMS + Fleet Telemetry |
-| **Mid-Range Edge** | Raspberry Pi 4/5 + Coral Edge TPU | < 12 ms | Offline standalone in-vehicle alert unit |
-| **IoT Sensor Gateway** | ESP32-S3 + Smartphone/Head Unit | < 25 ms | Low-cost sensor capture with local display |
+```
+ALERT/uta-reallife-drowsiness-dataset/
+  Fold1_part1/Fold1_part1/<subject>/{0,5,10}.mov
+  Fold2_part1/...
+  ...
+```
 
-### Key System Guarantees:
-* **100% Offline Operation:** No internet connectivity required for inference; zero privacy leaks.
-* **Sub-15ms Latency:** Highly optimized feature extraction allowing 30–60 FPS real-time processing on standard dual-core CPUs.
-* **Lighting Independence:** Stack designed for 940nm Near-Infrared (NIR) LED illuminators for night driving.
+Label mapping: `0.mov` → Alert (0) · `5.mov` → Low Vigilant (1) · `10.MOV` → Drowsy (2)
+
+Download: [UTA-RLDD on IEEE DataPort](https://ieee-dataport.org/open-access/utarldd-uta-real-life-drowsiness-dataset)
 
 ---
 
-## License & Citation
+## Training Pipeline
 
-Refer to [`research/cited-resources.md`](file:///home/prem/Desktop/projects/driver-fatigue-detection/research/cited-resources.md) for academic citations (Soukupová & Čech, Wierwille PERCLOS, MediaPipe, NTHU-DDD, UTA-RLDD).
+### Step 1 — Extract feature cache
 
-*ALERT - Automated Landmark based Eye and Response Tracker.*
- 
+```bash
+# Dry-run first to verify all videos are found
+python scripts/extract_cache.py --dry-run
+
+# Extract features for all videos (~2–4 hours for 141 videos)
+python scripts/extract_cache.py
+
+# Or one fold at a time:
+python scripts/extract_cache.py --fold 1
+```
+
+This creates `cache/fold<N>_<subject>_<label>.npz` files containing
+`(M, 60, 8)` float32 windows ready for training.
+
+### Step 2 — Train
+
+```bash
+python -m training.trainer --val-fold 4 --epochs 100
+```
+
+Best checkpoint saved to `models/alert_model_best.pt`.
+Training log saved to `logs/training_metrics.json`.
+
+### Step 3 — Evaluate
+
+```bash
+python -m training.evaluate --val-fold 4
+```
+
+Prints per-class precision / recall / F1.
+Saves `logs/confusion_matrix.json`.
+
 ---
- 
-## Authors
- 
-- Kavya Kothari [k-is-sick](https://github.com/k-is-sick)
-- Prem Deshani [zoro1126](https://github.com/zoro1126)
-- Mehulsinh Rathod
- 
+
+## Running the Detector
+
+```bash
+# Default (webcam 0, loads models/alert_model_best.pt)
+python src/run_alert.py
+
+# Custom model or camera
+python src/run_alert.py --model models/my_model.pt --camera 1
+
+# Re-run calibration (10-second open-eye session)
+python src/run_alert.py --recalibrate
+```
+
+### First-run calibration
+
+On first launch, ALERT runs a 10-second calibration phase where you look directly at the camera with eyes wide open. This sets a personalised EAR threshold stored at `~/.alert/calibration.json`. Subsequent launches skip calibration automatically.
+
+---
+
+## HUD Guide
+
+| Element | Description |
+|---|---|
+| **Top bar** | Alert state (NORMAL / WARNING / CRITICAL) + predicted class + confidence |
+| **Left panel** | Live EAR, MAR, PERCLOS, head pitch/yaw, blink rate — red = above threshold |
+| **Right bars** | Per-class softmax probabilities |
+| **Bottom strip** | Attention weight heatmap — which of the 60 frames drove the prediction |
+| **Warm-up bar** | Shown until the 60-frame buffer is full (first ~4 seconds) |
+
+**Press Q to quit.**
+
+---
+
+## Running Tests
+
+```bash
+pytest tests/ -v
+```
+
+Tests cover EAR/MAR geometry, PERCLOS and blink state machine,
+FrameFeatures serialisation, HeadPoseEstimator camera matrix,
+attention weight normalisation, gradient flow, dropout stochasticity,
+and model save/load roundtrip.
+
+---
+
+## Resource Usage
+
+| Resource | Value |
+|---|---|
+| RAM (runtime) | ~800 MB (MediaPipe + PyTorch + OpenCV) |
+| Model size | 0.25 MB on disk |
+| Parameters | 63,939 |
+| Inference rate | Every 15 frames (1 second at 15 FPS) |
+
+---
+
+## Research Foundations
+
+| Paper | Contribution |
+|---|---|
+| Liu et al. (2022) IET Image Processing | Foundational BiGRU architecture for temporal fatigue modeling |
+| Sensors MDPI (2023) | Benchmark review — PERCLOS + temporal context outperforms EAR alone |
+| Soukupová & Čech (2016) | Eye Aspect Ratio (EAR) formula |
+| Guo et al. (2020) | 6-point solvePnP head pose estimation |
+| Um et al. (2017) ACM ICMI | Time-series data augmentation (gaussian noise, time warp) |
+| Bahdanau et al. (2015) | Additive attention mechanism |
+
+---
+
+*ALERT is a software-only research prototype. Do not rely on it as your sole means of staying awake while driving.*
