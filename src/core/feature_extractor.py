@@ -17,6 +17,7 @@ Features extracted
 References
 ----------
 - Soukupová & Čech (2016): EAR = (|p2-p6| + |p3-p5|) / (2 * |p1-p4|)
+- Guo et al. (2020): 6-point solvePnP head pose (nose, chin, eye corners, mouth corners)
 - MediaPipe FaceMesh landmark map:
   https://github.com/google/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model_uv_visualization.png
 """
@@ -27,6 +28,7 @@ import math
 from collections import deque
 from typing import NamedTuple
 
+import cv2
 import numpy as np
 
 from utils.config import Config
@@ -62,8 +64,8 @@ class FrameFeatures(NamedTuple):
     ear_avg: float
     mar: float
     perclos: float       # requires a FeatureExtractor instance (rolling buffer)
-    head_pitch: float    # degrees; populated in increment [4], 0.0 until then
-    head_yaw: float      # degrees; populated in increment [4], 0.0 until then
+    head_pitch: float    # degrees; down is positive
+    head_yaw: float      # degrees; right is positive
     blink_rate: float    # blinks/second over rolling buffer
 
     def to_numpy(self) -> np.ndarray:
@@ -140,6 +142,117 @@ def compute_mar(landmarks) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Head pose estimation using PnP solver
+# ---------------------------------------------------------------------------
+
+# 3-D reference coordinates of 6 canonical face points in a generic model.
+# Origin at nose tip; units are arbitrary (millimetre-scale works fine with
+# a normalised focal-length camera matrix). Sourced from the standard
+# solvePnP head-pose recipe (Guo et al., 2020).
+_HEAD_POSE_3D = np.array([
+    [0.0,    0.0,    0.0   ],   # Nose tip          (landmark 1)
+    [0.0,   -63.6,  -12.5 ],   # Chin              (landmark 199)
+    [-43.3,  32.7,  -26.0 ],   # Left eye corner   (landmark 263)
+    [43.3,   32.7,  -26.0 ],   # Right eye corner  (landmark 33)
+    [-28.9, -28.9,  -24.1 ],   # Left mouth corner (landmark 61)
+    [28.9,  -28.9,  -24.1 ],   # Right mouth corner(landmark 291)
+], dtype=np.float64)
+
+# Corresponding MediaPipe landmark indices (must match _HEAD_POSE_3D row order)
+_HEAD_POSE_LM_IDX = [1, 199, 263, 33, 61, 291]
+
+
+class HeadPoseEstimator:
+    """
+    Estimates head pitch and yaw (degrees) from 6 MediaPipe landmarks
+    using OpenCV's solvePnP (EPNP algorithm).
+
+    Focal length is approximated from image width (reasonable for a webcam).
+    A new instance can be shared across frames; call `estimate()` each frame.
+
+    Usage
+    -----
+    estimator = HeadPoseEstimator()
+    pitch, yaw = estimator.estimate(face_landmarks, frame_w, frame_h)
+    """
+
+    def __init__(self) -> None:
+        # Cache the last camera matrix to avoid rebuilding it every frame when
+        # the resolution stays the same (typical for a live webcam stream).
+        self._last_wh: tuple[int, int] | None = None
+        self._camera_matrix: np.ndarray | None = None
+        self._dist_coeffs = np.zeros((4, 1), dtype=np.float64)  # assume no lens distortion
+
+    # ------------------------------------------------------------------
+    def _build_camera_matrix(self, w: int, h: int) -> np.ndarray:
+        """Approximate pinhole camera matrix from image dimensions."""
+        focal = w  # f ≈ image_width is a common heuristic for ~60° FOV webcams
+        cx, cy = w / 2.0, h / 2.0
+        return np.array([
+            [focal,  0,    cx],
+            [0,      focal, cy],
+            [0,      0,    1.0],
+        ], dtype=np.float64)
+
+    # ------------------------------------------------------------------
+    def estimate(
+        self,
+        face_landmarks,
+        frame_w: int,
+        frame_h: int,
+    ) -> tuple[float, float]:
+        """
+        Estimate head pitch and yaw for the current frame.
+
+        Parameters
+        ----------
+        face_landmarks : mediapipe NormalizedLandmarkList
+        frame_w, frame_h : int
+            Pixel dimensions of the source image (needed to convert
+            normalised landmark coords to pixel coords).
+
+        Returns
+        -------
+        (pitch_deg, yaw_deg) : tuple[float, float]
+            pitch > 0 → head tilting downward
+            yaw   > 0 → head turning right
+            Returns (0.0, 0.0) if solvePnP fails.
+        """
+        # Rebuild camera matrix only when resolution changes
+        if self._last_wh != (frame_w, frame_h):
+            self._camera_matrix = self._build_camera_matrix(frame_w, frame_h)
+            self._last_wh = (frame_w, frame_h)
+
+        lm = face_landmarks.landmark
+
+        # Convert normalised (x, y) → pixel (x, y) for the 6 reference points
+        image_points = np.array(
+            [[lm[i].x * frame_w, lm[i].y * frame_h] for i in _HEAD_POSE_LM_IDX],
+            dtype=np.float64,
+        )
+
+        success, rvec, _ = cv2.solvePnP(
+            _HEAD_POSE_3D,
+            image_points,
+            self._camera_matrix,
+            self._dist_coeffs,
+            flags=cv2.SOLVEPNP_EPNP,
+        )
+
+        if not success:
+            return 0.0, 0.0
+
+        # Convert rotation vector → rotation matrix → Euler angles
+        rmat, _ = cv2.Rodrigues(rvec)
+        # Decompose via RQ (same as getEulerAngles in many references)
+        angles, _, _, _, _, _ = cv2.RQDecomp3x3(rmat)
+
+        pitch_deg = float(angles[0])  # X-axis rotation → pitch
+        yaw_deg   = float(angles[1])  # Y-axis rotation → yaw
+        return pitch_deg, yaw_deg
+
+
+# ---------------------------------------------------------------------------
 # Stateful extractor — tracks rolling buffers for PERCLOS + blink rate
 # ---------------------------------------------------------------------------
 
@@ -167,6 +280,7 @@ class FeatureExtractor:
         self.ear_threshold = ear_threshold
         self.window_size = window_size
         self.fps = fps
+        self._head_pose = HeadPoseEstimator()
 
         # Rolling buffer: stores EAR_avg for last `window_size` frames
         self._ear_buffer: deque[float] = deque(maxlen=window_size)
@@ -183,7 +297,12 @@ class FeatureExtractor:
         self.ear_threshold = ear_threshold
 
     # ------------------------------------------------------------------
-    def extract(self, face_landmarks) -> FrameFeatures:
+    def extract(
+        self,
+        face_landmarks,
+        frame_w: int = 640,
+        frame_h: int = 480,
+    ) -> FrameFeatures:
         """
         Compute all features for the current frame.
 
@@ -191,6 +310,9 @@ class FeatureExtractor:
         ----------
         face_landmarks : mediapipe NormalizedLandmarkList
             `.landmark` attribute containing 468 points.
+        frame_w, frame_h : int
+            Pixel dimensions of the source image. Required for accurate head
+            pose estimation. Defaults to a common webcam resolution.
 
         Returns
         -------
@@ -217,14 +339,17 @@ class FeatureExtractor:
         self._update_blink_state(ear_avg)
         blink_rate = self._compute_blink_rate()
 
+        # --- Head pose ---
+        pitch, yaw = self._head_pose.estimate(face_landmarks, frame_w, frame_h)
+
         return FrameFeatures(
             ear_left=ear_l,
             ear_right=ear_r,
             ear_avg=ear_avg,
             mar=mar,
             perclos=perclos,
-            head_pitch=0.0,   # filled in by HeadPoseEstimator (increment [4])
-            head_yaw=0.0,
+            head_pitch=pitch,
+            head_yaw=yaw,
             blink_rate=blink_rate,
         )
 
