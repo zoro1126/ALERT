@@ -1,3 +1,7 @@
+---
+trigger: manual
+---
+
 # ALERT Project — Development Discipline Rules
 
 These rules are **always active** for the ALERT project. They enforce incremental
