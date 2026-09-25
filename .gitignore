@@ -32,5 +32,6 @@ misc/
 # IDE / OS
 .vscode/
 .idea/
+.agents/
 .DS_Store
 *.swp
