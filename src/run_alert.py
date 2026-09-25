@@ -34,6 +34,12 @@ def main() -> None:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Run without a trained model (threshold-based rules). "
+             "Good for testing the camera/MediaPipe/HUD pipeline.",
+    )
+    parser.add_argument(
         "--model", "-m",
         default=str(Config.MODEL_PATH),
         help="Path to trained .pt model checkpoint.",
@@ -64,6 +70,15 @@ def main() -> None:
             print(f"[run_alert] Deleted saved calibration: {cal_path}")
         else:
             print("[run_alert] No saved calibration found; proceeding to calibrate.")
+
+    # --- Demo mode (no model needed) ---
+    if args.demo:
+        from ui.dashboard import run_demo
+        run_demo(
+            camera_idx=args.camera,
+            show_fps=not args.no_fps,
+        )
+        return
 
     model_path = Path(args.model)
     if not model_path.exists():

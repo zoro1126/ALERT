@@ -18,6 +18,7 @@ import warnings
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_PROJECT_ROOT / "src"))
@@ -217,3 +218,129 @@ def run(
     cap.release()
     cv2.destroyAllWindows()
     print("[ALERT] Session ended.")
+
+
+# ---------------------------------------------------------------------------
+# Demo mode — no model required, threshold-based rule engine only
+# ---------------------------------------------------------------------------
+
+def run_demo(
+    camera_idx: int  = Config.CAMERA_INDEX,
+    show_fps:   bool = True,
+) -> None:
+    """
+    Run the full pipeline WITHOUT a trained model.
+
+    Alert state is determined by simple thresholds:
+      EAR_avg < threshold for > WARNING_DURATION  →  WARNING
+      PERCLOS  > PERCLOS_CRITICAL                 →  CRITICAL
+      |head_pitch| > HEAD_PITCH_THRESHOLD         →  WARNING
+
+    All MediaPipe, feature extraction, and HUD code runs normally.
+    Use this to verify the camera / MediaPipe / HUD pipeline works
+    before training a model.
+
+    Press Q to quit.
+    """
+    cap = cv2.VideoCapture(camera_idx)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open camera index {camera_idx}")
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  Config.CAMERA_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
+
+    frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    extractor = FeatureExtractor(fps=float(Config.TARGET_FPS))
+    alert_mgr = AlertManager()
+
+    # Rule-based classifier state (replaces BiGRU)
+    import time as _time
+    low_ear_since: float | None = None
+
+    print("[DEMO] Running in demo mode — no model required. Press Q to quit.")
+
+    with _build_landmarker() as landmarker:
+        ear_threshold = _run_calibration(cap, landmarker, extractor)
+
+        prev_time = time.perf_counter()
+
+        while True:
+            ret, bgr = cap.read()
+            if not ret:
+                print("[DEMO] Camera lost — exiting.")
+                break
+
+            rgb      = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            result   = landmarker.detect(mp_image)
+
+            if not result.face_landmarks:
+                hud.draw_no_face(bgr)
+                low_ear_since = None
+            else:
+                adapted  = _LandmarkAdapter(result.face_landmarks[0])
+                features = extractor.extract(adapted, frame_w, frame_h)
+
+                # --- Simple rule-based state ---
+                now = _time.monotonic()
+                if features.ear_avg < ear_threshold:
+                    if low_ear_since is None:
+                        low_ear_since = now
+                    elapsed = now - low_ear_since
+                else:
+                    low_ear_since = None
+                    elapsed = 0.0
+
+                if features.perclos > Config.PERCLOS_CRITICAL:
+                    class_idx = 2   # Drowsy
+                elif elapsed > Config.WARNING_DURATION or features.perclos > Config.PERCLOS_WARNING:
+                    class_idx = 1   # Low Vigilant
+                else:
+                    class_idx = 0   # Alert
+
+                alert_mgr.update(class_idx)
+                label = Config.CLASS_NAMES[class_idx]
+
+                # Mock confidence: 1 - perclos for alert, perclos for drowsy
+                confidence = (1.0 - features.perclos) if class_idx == 0 else features.perclos
+                confidence = max(0.4, min(confidence, 0.99))
+
+                # Mock prob bars (rule-based, not softmax)
+                probs = np.zeros(3, dtype=np.float32)
+                probs[class_idx] = confidence
+                probs[(class_idx + 1) % 3] = (1.0 - confidence) * 0.6
+                probs[(class_idx + 2) % 3] = (1.0 - confidence) * 0.4
+                probs /= probs.sum()
+
+                hud.draw_status_bar(bgr, alert_mgr.state, label, float(probs[class_idx]))
+                hud.draw_prob_bars(bgr, probs)
+                hud.draw_feature_panel(
+                    bgr,
+                    features.ear_left, features.ear_right, features.ear_avg,
+                    features.mar, features.perclos,
+                    features.head_pitch, features.head_yaw,
+                    features.blink_rate,
+                    ear_threshold=ear_threshold,
+                )
+
+                # Demo mode label
+                cv2.putText(bgr, "DEMO MODE — no model",
+                            (frame_w // 2 - 110, frame_h - 16),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 80, 255), 1)
+
+            if show_fps:
+                now_t = time.perf_counter()
+                fps = 1.0 / max(now_t - prev_time, 1e-6)
+                prev_time = now_t
+                cv2.putText(bgr, f"FPS {fps:.0f}",
+                            (frame_w - 80, frame_h - 12),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 180), 1)
+
+            cv2.imshow("ALERT — Demo", bgr)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    print("[DEMO] Session ended.")
