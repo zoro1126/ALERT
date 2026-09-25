@@ -244,7 +244,11 @@ def run_demo(
     """
     cap = cv2.VideoCapture(camera_idx)
     if not cap.isOpened():
-        raise RuntimeError(f"Cannot open camera index {camera_idx}")
+        import glob
+        available = sorted(glob.glob("/dev/video*"))
+        hint = (f"  Available: {', '.join(available)} → try --camera 1"
+                if available else "  No /dev/video* devices found.")
+        raise RuntimeError(f"Cannot open camera index {camera_idx}\n{hint}")
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  Config.CAMERA_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
 
