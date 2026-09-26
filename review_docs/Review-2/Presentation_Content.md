@@ -162,36 +162,30 @@
 
 ---
 
-## Slide 11: Result
+## Slide 11: Current Implementation & Results (Review-2 Milestone)
 
-* **Pre-extracted Feature Cache:** All 141 UTA-RLDD videos converted into **84,942 feature windows** (total size: **29 MB** compressed across 4 folds).
-* **High-Throughput CPU Training:**
-  * Intel Core i7-7820HQ achieves **1,510 samples/sec** DataLoader throughput with live 4-way temporal augmentation.
-  * Empirical training time: **68.5 seconds per epoch** (~22 minutes for 20 epochs to full convergence).
-* **Real-Time Edge Latency:**
-  * MediaPipe FaceLandmarker: ~25 ms/frame.
-  * BiGRU-Attention Inference: ~2.1 ms/stride.
-  * Total Frame Budget: **~28–34 ms** (>30 FPS sustained on commodity quad-core CPU) [3].
-* **Model Footprint:** 0.25 MB `.pt` file, requiring <300 MB operational RAM during live webcam inference.
+* **Operational Baseline & Threshold POC:** A complete real-time proof-of-concept is functional and demonstrated live using 10s adaptive calibration, EAR, MAR, PERCLOS, and head pose [7], [10].
+* **Live Inference Performance:** Runs smoothly at **>30 FPS (~25 ms latency)** on standard CPU with <200 MB RAM footprint and immediate procedural audio alerts.
+* **Dataset Feature Caching Complete:** Extracted 84,942 temporal window sequences from all 141 UTA-RLDD videos across 4 folds (29 MB compressed cache) [4].
+* **Deep Learning Training Status:** The BiGRU-Attention network and data loaders are fully built and benchmarked (68.5s/epoch on CPU); full multi-epoch training is in progress [8], [9].
 
 ---
 
 ## Slide 12: Conclusion
 
-* **Autonomous Edge DMS:** Successfully built ALERT, an end-to-end driver drowsiness detector operating with 100% offline autonomy and complete user privacy.
-* **Lightweight Architecture Superiority:** Replaced computationally heavy CNN/ViT approaches with a 63.9k-parameter BiGRU-Attention network [8], [9].
-* **Anatomical Robustness:** Demonstrated that personalized baseline calibration eliminates false positives caused by natural eye-shape variations [7].
-* **Multi-Modal Reliability:** Fusing EAR, MAR, PERCLOS, and head pose eliminates single-point-of-failure blindspots during nods and head turns [10].
-* **Practical Viability:** Validated empirical 30+ FPS execution on commodity hardware, proving cost-effective deployment across automotive transport fleets [3].
+* **Functional Edge Prototype:** Successfully developed and validated a privacy-preserving, zero-cloud driver fatigue monitoring POC operating on standard CPU hardware [3].
+* **Elimination of Anatomical Bias:** Demonstrated that 10-second personalized calibration effectively customizes thresholds for different eye shapes [7].
+* **Multi-Modal Reliability:** Real-time fusion of EAR, MAR, and solvePnP head pitch reliably detects micro-sleeps, yawns, and head drops without false alarms [10].
+* **Strong Foundation for DL:** Complete data preprocessing and feature cache (84.9k windows) establish the exact pipeline for the final trained sequence classifier [4].
 
 ---
 
-## Slide 13: Future Work
+## Slide 13: Future Work & Next Steps
 
-* **Embedded Hardware Deployment:** Porting ALERT PyTorch weights to ONNX Runtime INT8, Intel OpenVINO, and NVIDIA TensorRT for Raspberry Pi 5 and Jetson Orin Nano.
-* **Multi-Spectral NIR Illumination:** Integrating 850 nm / 940 nm Near-Infrared camera sensors with active IR LEDs for pitch-black nighttime driving and dark sunglasses penetration.
-* **Continuous EMA Baseline Drift:** Implementing adaptive exponential moving averages to adjust thresholds across continuous 8-hour commercial driving shifts.
-* **Vehicle CAN Bus Telemetry Fusion:** Fusing driver facial fatigue states with vehicle steering angle entropy, lane departure warnings, and acceleration patterns.
+* **Complete BiGRU Model Training:** Execute full multi-epoch training and validation on the cached 84,942 windows to benchmark trained F1 scores against the threshold POC [8], [9].
+* **Embedded Hardware Deployment:** Export trained model to ONNX Runtime INT8 and OpenVINO for low-power edge hardware (Raspberry Pi 5 / Jetson Orin Nano).
+* **Near-Infrared (NIR) Camera:** Integrate active 850 nm / 940 nm IR illumination for nighttime driving robustness and dark sunglasses penetration.
+* **Vehicle Telemetry Fusion:** Fuse driver visual alertness states with CAN bus metrics (steering wheel entropy and lane-keeping data).
 
 ---
 
