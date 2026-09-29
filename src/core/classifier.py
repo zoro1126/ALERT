@@ -33,6 +33,8 @@ import torch
 import torch.nn.functional as F
 
 from core.model import FatigueClassifier
+from training.normalizer import FeatureNormalizer
+from training.trainer import _clip_window
 from utils.config import Config
 
 
@@ -75,7 +77,8 @@ class RealTimeClassifier:
         self._frames_since_inference: int = 0
         self._last_result: ClassifierResult | None = None
 
-        self._model = self._load_model(Path(model_path))
+        self._model      = self._load_model(Path(model_path))
+        self._normalizer = self._load_normalizer(Path(model_path))
 
     # ------------------------------------------------------------------
     def _load_model(self, path: Path) -> FatigueClassifier:
@@ -96,6 +99,25 @@ class RealTimeClassifier:
         model.load_state_dict(ckpt["model_state"])
         model.eval()
         return model
+
+    # ------------------------------------------------------------------
+    def _load_normalizer(self, model_path: Path) -> FeatureNormalizer | None:
+        """
+        Load feature_stats.npz from the same directory as the model checkpoint.
+        Returns None (with a warning) if the file doesn't exist — allows
+        fallback to raw features so demo mode still works without a stats file.
+        """
+        stats_path = model_path.parent / "feature_stats.npz"
+        if not stats_path.exists():
+            print(
+                f"[RealTimeClassifier] WARNING: {stats_path} not found.\n"
+                "  Features will NOT be normalized — predictions may be unreliable.\n"
+                "  Re-train the model to generate feature_stats.npz."
+            )
+            return None
+        norm = FeatureNormalizer.load(stats_path)
+        print(f"[RealTimeClassifier] Normalizer loaded from {stats_path}")
+        return norm
 
     # ------------------------------------------------------------------
     def update(self, feature_vec: np.ndarray) -> ClassifierResult | None:
@@ -123,8 +145,16 @@ class RealTimeClassifier:
 
     # ------------------------------------------------------------------
     def _infer(self) -> ClassifierResult:
-        """Stack buffer → tensor → model forward → ClassifierResult."""
-        window = np.stack(list(self._buffer), axis=0)  # (60, 8)
+        """Stack buffer → clip → normalize → tensor → model forward → result."""
+        window = np.stack(list(self._buffer), axis=0)  # (60, 8) float32
+
+        # Apply the same preprocessing pipeline used during training:
+        #   1. Clip outliers (gimbal-lock EAR spikes, solvePnP Pitch wrapping)
+        #   2. Z-score normalize using training-set statistics
+        window = _clip_window(window.copy())
+        if self._normalizer is not None:
+            window = self._normalizer.transform_window(window)
+
         x = torch.from_numpy(window).unsqueeze(0).to(self.device)  # (1, 60, 8)
 
         with torch.no_grad():
