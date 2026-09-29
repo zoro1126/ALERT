@@ -95,7 +95,8 @@ class Config:
     # Training                                                             #
     # ------------------------------------------------------------------ #
     BATCH_SIZE: int = 128
-    LR: float = 1e-3
+    LR: float = 1e-4            # lowered from 1e-3: previous LR caused train/val
+                                # divergence in <5 epochs (train=0.48, val=2.32)
     WEIGHT_DECAY: float = 1e-4
     MAX_EPOCHS: int = 50
     PATIENCE: int = 20          # early stopping on val macro-F1
