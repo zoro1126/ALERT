@@ -459,21 +459,47 @@ export PYTHONPATH=src            # Linux/macOS (set once per session)
 ### Core Training Command
 
 ```bash
-# Standard training with fold 4 as validation (recommended)
+# Standard training — fold 4 as validation (recommended)
 PYTHONPATH=src python3 src/training/trainer.py --val-fold 4
+# Uses: LR=1e-4, batch=128, train-stride=2 (50% overlap, ~32K windows)
 
-# Larger batch size for faster throughput on machines with more RAM
-PYTHONPATH=src python3 src/training/trainer.py --val-fold 4 --batch-size 128
+# Fully independent windows (0% overlap, ~16K windows — slowest to memorise)
+PYTHONPATH=src python3 src/training/trainer.py --val-fold 4 --train-stride 4
+
+# All windows / old behaviour (NOT recommended — severe overfitting)
+PYTHONPATH=src python3 src/training/trainer.py --val-fold 4 --train-stride 1
 
 # Custom learning rate and patience
-PYTHONPATH=src python3 src/training/trainer.py --val-fold 4 --lr 5e-4 --patience 15
+PYTHONPATH=src python3 src/training/trainer.py --val-fold 4 --lr 5e-5 --patience 15
 
-# Use a different fold as validation (e.g., fold 1)
-PYTHONPATH=src python3 src/training/trainer.py --val-fold 1 --batch-size 128
+# Use a different fold as validation
+PYTHONPATH=src python3 src/training/trainer.py --val-fold 1
 
 # Limit epochs for a quick smoke test
 PYTHONPATH=src python3 src/training/trainer.py --val-fold 4 --epochs 5
 ```
+
+### --train-stride Reference
+
+| `--train-stride` | Windows loaded | Effective overlap | Use case |
+| :---: | :---: | :---: | :--- |
+| `1` | 64K | 75% | ⚠ Not recommended — severe overfitting observed |
+| `2` *(default)* | 32K | 50% | Recommended — 4× slower divergence, good balance |
+| `4` | 16K | 0% | Most independent samples; slower but best generalisation |
+
+### Training Behaviour Benchmark
+
+Before and after the pipeline fixes (normalization + clipping + stride + LR):
+
+| Epoch | Old train | Old val | Old gap | New train | New val | New gap |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 | 0.877 | 1.489 | +0.61 | 1.031 | 1.086 | **+0.06** |
+| 2 | 0.696 | 1.894 | +1.20 | 0.975 | 1.130 | **+0.15** |
+| 3 | 0.584 | 2.118 | +1.53 | 0.947 | 1.188 | **+0.24** |
+| 4 | 0.519 | 2.292 | +1.77 | 0.927 | 1.223 | **+0.29** |
+| 5 | 0.477 | 2.318 | +1.84 | 0.905 | 1.278 | **+0.37** |
+
+**Divergence rate: +0.31σ/epoch → +0.08σ/epoch (4× improvement)**. Full 50-epoch runs are expected to show val loss stabilising around epoch 15–25.
 
 ### Cache Extraction Commands
 
