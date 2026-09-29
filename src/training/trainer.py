@@ -39,6 +39,7 @@ sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 
 from core.model import FatigueClassifier
 from training.augment import AugmentedWindowDataset
+from training.normalizer import FeatureNormalizer
 from utils.config import Config
 
 
@@ -55,7 +56,11 @@ class CachedWindowDataset(Dataset):
       label   : int scalar
     """
 
-    def __init__(self, npz_paths: list[Path]) -> None:
+    def __init__(
+        self,
+        npz_paths: list[Path],
+        normalizer: FeatureNormalizer | None = None,
+    ) -> None:
         self.windows: list[np.ndarray] = []
         self.labels:  list[int]        = []
 
@@ -68,14 +73,17 @@ class CachedWindowDataset(Dataset):
 
         self._windows = np.concatenate(self.windows, axis=0)   # (N, 60, 8)
         self._labels  = np.array(self.labels, dtype=np.int64)  # (N,)
+        self._normalizer = normalizer
 
     def __len__(self) -> int:
         return len(self._labels)
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        x = torch.from_numpy(self._windows[idx])          # (60, 8) float32
+        x = self._windows[idx].copy()      # (60, 8) float32 — copy before mutate
+        if self._normalizer is not None:
+            x = self._normalizer.transform_window(x)
         y = torch.tensor(self._labels[idx], dtype=torch.long)
-        return x, y
+        return torch.from_numpy(x), y
 
     def class_weights(self) -> torch.Tensor:
         """Inverse-frequency weights for WeightedRandomSampler."""
@@ -193,8 +201,20 @@ def train(
         )
     print(f"Train  : {len(train_files)} videos | Val: {len(val_files)} videos")
 
-    train_ds = CachedWindowDataset(train_files)
-    val_ds   = CachedWindowDataset(val_files)
+    # Fit normalizer on raw training windows (before augmentation, no val leakage)
+    raw_train_ds = CachedWindowDataset(train_files)      # unnormalized — for fitting
+    print(f"Train windows : {len(raw_train_ds)} | Val windows (raw count): {len(CachedWindowDataset(val_files))}")
+
+    normalizer = FeatureNormalizer()
+    normalizer.fit(raw_train_ds._windows)                # (N, 60, 8)
+    stats_path = model_path.parent / "feature_stats.npz"
+    normalizer.save(stats_path)
+    print(f"Normalizer    : fitted and saved to {stats_path}")
+    print(normalizer.summary())
+
+    # Rebuild datasets with normalization applied inside __getitem__
+    train_ds = CachedWindowDataset(train_files, normalizer=normalizer)
+    val_ds   = CachedWindowDataset(val_files,   normalizer=normalizer)
     print(f"Train windows : {len(train_ds)} | Val windows: {len(val_ds)}")
 
     # Wrap training set with on-the-fly augmentations; val stays clean
