@@ -261,6 +261,52 @@ all_windows = np.concatenate([np.load(f)["windows"] for f in train_files])
 
 ---
 
+## 5. Preprocessing Pipeline
+
+> **Why this matters:** Raw features span wildly different scales (EAR ≈ 0.27 vs. Pitch ≈ ±30°). Without normalization, GRU gradients are dominated by Pitch/Yaw and the model overfits to per-subject camera-angle biases instead of learning fatigue signals.
+
+The following two-step pipeline is applied **identically** at training time (inside `CachedWindowDataset.__getitem__`) and at inference time (inside `RealTimeClassifier._infer()`), ensuring no train/inference mismatch.
+
+### Step 1 — Outlier Clipping (`_clip_window`)
+
+Applied first, before normalization, to remove gimbal-lock artifacts:
+
+| Feature | Clip Range | Reason |
+| :--- | :--- | :--- |
+| EAR_L / EAR_R / EAR_avg | `[0.0, 0.6]` | Physically bounded ~0–0.5; spikes to 20.8 are MediaPipe landmark collapses |
+| MAR | `[0.0, 0.8]` | Max yawn ≈ 0.7; raw outliers reached 8.6 |
+| Pitch | `[-60°, +60°]` | solvePnP gimbal lock wraps to ±179° at sharp head turns |
+| Yaw | `[-90°, +90°]` | Safety net; data already within range |
+| Blink rate | `[0.0, 4.0]` | p99.9 of training data; 10/s values are counting artifacts |
+
+### Step 2 — Z-score Normalization (`FeatureNormalizer`)
+
+- Statistics (mean, std) are computed from the **training split only** (no val leakage).
+- Computed on **already-clipped** windows so the stats reflect the actual distribution the model sees.
+- Saved to `models/feature_stats.npz` at the end of each training run.
+- Loaded automatically by `RealTimeClassifier` from the same directory as `alert_model_best.pt`.
+
+```
+Raw window (60, 8)
+  → _clip_window()              clamp outliers per feature
+  → FeatureNormalizer           (x - mean) / std  per feature column
+  → AugmentedWindowDataset      noise / warp / mask / crop  [train only]
+  → FatigueClassifier (GRU)
+```
+
+### `models/feature_stats.npz` — Content
+
+```python
+import numpy as np
+stats = np.load("models/feature_stats.npz")
+stats["mean"]  # (8,) float64 — per-feature mean of clipped training windows
+stats["std"]   # (8,) float64 — per-feature std  of clipped training windows
+```
+
+> **Important:** If you re-extract the cache or change the training split, re-train so a fresh `feature_stats.npz` is generated. Never share a stats file between different dataset splits.
+
+---
+
 ## 5. Model Architecture
 
 ### FatigueClassifier (`src/core/model.py`)
@@ -493,7 +539,23 @@ print(f"Best epoch: {ckpt['epoch']}, Val Loss: {ckpt['val_loss']:.4f}, Val Acc: 
 
 ### Monitor Training Progress
 
-The trainer prints a live table to the terminal every epoch:
+At startup, the trainer prints the normalizer summary showing per-feature statistics computed on clipped training data:
+
+```
+Normalizer    : fitted on clipped data, saved to models/feature_stats.npz
+Feature            Mean        Std
+----------------------------------
+EAR_L            0.2677     0.1536
+EAR_R            0.2695     0.1534
+EAR_avg          0.2695     0.1539
+MAR              0.4416     0.0235
+PERCLOS          0.6327     0.4560
+Pitch           -0.6757    22.6459
+Yaw             30.3677    33.5302
+Blink_rate       0.1620     0.3907
+```
+
+Then the per-epoch training table:
 
 ```
 Epoch  Train Loss  Train Acc  Val Loss  Val Acc        LR    Time
@@ -559,6 +621,15 @@ python3 src/run_alert.py --camera 1 --model models/alert_model_best.pt
 ---
 
 ## 11. Troubleshooting
+
+### `[RealTimeClassifier] WARNING: models/feature_stats.npz not found`
+
+The normalizer stats file is generated automatically when you train the model. If you see this warning:
+```bash
+# Re-train to generate feature_stats.npz:
+PYTHONPATH=src python3 src/training/trainer.py --val-fold 4
+```
+The model will still run but predictions will be unreliable because raw un-normalized features are fed to the GRU.
 
 ### `No module named 'cv2'` / `No module named 'mediapipe'`
 ```bash
