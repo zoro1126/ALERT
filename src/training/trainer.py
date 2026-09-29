@@ -47,6 +47,36 @@ from utils.config import Config
 # Dataset
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Outlier clipping bounds (applied per-frame before normalization)
+#
+# Rationale:
+#   EAR  is a ratio of eye landmark distances, physically bounded 0–~0.5.
+#   Values > 0.6 are MediaPipe gimbal-lock / collapsed-landmark artifacts.
+#   MAR  similarly bounded 0–~1.5; values > 2.0 are detection failures.
+#   Pitch from solvePnP wraps to ±179° at near-perpendicular poses (gimbal
+#   lock). Genuine fatigue head-drops are within ±60°.
+#   Yaw  is already within ±90° in the real data — bounds are a safety net.
+# ---------------------------------------------------------------------------
+_CLIP_BOUNDS: dict[int, tuple[float, float]] = {
+    0: (0.0,  0.6),    # EAR_L
+    1: (0.0,  0.6),    # EAR_R
+    2: (0.0,  0.6),    # EAR_avg
+    3: (0.0,  0.8),    # MAR  — biological max at full yawn ~0.7; 0.8 gives headroom
+    # 4: PERCLOS — already bounded [0, 1] by construction, skip
+    5: (-60.0, 60.0),  # Pitch  (degrees)
+    6: (-90.0, 90.0),  # Yaw    (degrees)
+    7: (0.0,   4.0),   # Blink_rate — p99.9 of training data; 10/s values are artifacts
+}
+
+
+def _clip_window(x: np.ndarray) -> np.ndarray:
+    """Clip per-feature outliers in a (T, F) window in-place."""
+    for col, (lo, hi) in _CLIP_BOUNDS.items():
+        np.clip(x[:, col], lo, hi, out=x[:, col])
+    return x
+
+
 class CachedWindowDataset(Dataset):
     """
     Loads pre-extracted .npz window files from the cache directory.
@@ -80,8 +110,9 @@ class CachedWindowDataset(Dataset):
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         x = self._windows[idx].copy()      # (60, 8) float32 — copy before mutate
+        x = _clip_window(x)                # 1. clip outliers (gimbal-lock etc.)
         if self._normalizer is not None:
-            x = self._normalizer.transform_window(x)
+            x = self._normalizer.transform_window(x)  # 2. z-score normalize
         y = torch.tensor(self._labels[idx], dtype=torch.long)
         return torch.from_numpy(x), y
 
@@ -201,15 +232,22 @@ def train(
         )
     print(f"Train  : {len(train_files)} videos | Val: {len(val_files)} videos")
 
-    # Fit normalizer on raw training windows (before augmentation, no val leakage)
-    raw_train_ds = CachedWindowDataset(train_files)      # unnormalized — for fitting
+    # Fit normalizer on CLIPPED training windows so stats match what the model
+    # actually sees in __getitem__ (clip then normalize). Fitting on raw data
+    # would compute e.g. MAR std=0.026 from outlier-skewed data, producing
+    # normalized MAR values of ~60 for legitimate clipped MAR=2.0.
+    raw_train_ds = CachedWindowDataset(train_files)      # unnormalized, for clipping
+    clipped_train_windows = np.stack(
+        [_clip_window(raw_train_ds._windows[i].copy())
+         for i in range(len(raw_train_ds))]
+    )                                                    # (N, 60, 8) clipped
     print(f"Train windows : {len(raw_train_ds)} | Val windows (raw count): {len(CachedWindowDataset(val_files))}")
 
     normalizer = FeatureNormalizer()
-    normalizer.fit(raw_train_ds._windows)                # (N, 60, 8)
+    normalizer.fit(clipped_train_windows)                # fit on clipped distribution
     stats_path = model_path.parent / "feature_stats.npz"
     normalizer.save(stats_path)
-    print(f"Normalizer    : fitted and saved to {stats_path}")
+    print(f"Normalizer    : fitted on clipped data, saved to {stats_path}")
     print(normalizer.summary())
 
     # Rebuild datasets with normalization applied inside __getitem__
