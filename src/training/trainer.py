@@ -90,20 +90,35 @@ class CachedWindowDataset(Dataset):
         self,
         npz_paths: list[Path],
         normalizer: FeatureNormalizer | None = None,
+        subsample_stride: int = 1,
     ) -> None:
+        """
+        Parameters
+        ----------
+        npz_paths        : list of .npz cache files to load
+        normalizer       : fitted FeatureNormalizer (applied in __getitem__)
+        subsample_stride : keep every Nth window per file to reduce temporal
+                           redundancy. stride=1 → all windows (75% overlap);
+                           stride=2 → every 2nd window (50% overlap, ~half size);
+                           stride=4 → every 4th window (0% overlap, fully independent).
+                           Val dataset always uses stride=1 for thorough evaluation.
+        """
         self.windows: list[np.ndarray] = []
         self.labels:  list[int]        = []
 
         for p in npz_paths:
             data = np.load(p)
-            wins = data["windows"]          # (M, 60, 8)
+            wins = data["windows"]              # (M, 60, 8)
             label = int(data["label"])
+            # Subsample: take every Nth window from this file
+            wins = wins[::subsample_stride]
             self.windows.append(wins)
             self.labels.extend([label] * len(wins))
 
-        self._windows = np.concatenate(self.windows, axis=0)   # (N, 60, 8)
-        self._labels  = np.array(self.labels, dtype=np.int64)  # (N,)
-        self._normalizer = normalizer
+        self._windows = np.concatenate(self.windows, axis=0)   # (N', 60, 8)
+        self._labels  = np.array(self.labels, dtype=np.int64)  # (N',)
+        self._normalizer       = normalizer
+        self._subsample_stride = subsample_stride
 
     def __len__(self) -> int:
         return len(self._labels)
@@ -210,14 +225,15 @@ def _run_epoch(
 # ---------------------------------------------------------------------------
 
 def train(
-    val_fold:   int   = 4,
-    epochs:     int   = Config.MAX_EPOCHS,
-    batch_size: int   = Config.BATCH_SIZE,
-    lr:         float = Config.LR,
-    patience:   int   = Config.PATIENCE,
-    cache_dir:  Path  = Path(Config.CACHE_DIR),
-    model_path: Path  = Path(Config.MODEL_PATH),
-    log_path:   Path  = Path(Config.TRAINING_LOG),
+    val_fold:         int   = 4,
+    epochs:           int   = Config.MAX_EPOCHS,
+    batch_size:       int   = Config.BATCH_SIZE,
+    lr:               float = Config.LR,
+    patience:         int   = Config.PATIENCE,
+    train_stride:     int   = 2,
+    cache_dir:        Path  = Path(Config.CACHE_DIR),
+    model_path:       Path  = Path(Config.MODEL_PATH),
+    log_path:         Path  = Path(Config.TRAINING_LOG),
 ) -> None:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -232,16 +248,13 @@ def train(
         )
     print(f"Train  : {len(train_files)} videos | Val: {len(val_files)} videos")
 
-    # Fit normalizer on CLIPPED training windows so stats match what the model
-    # actually sees in __getitem__ (clip then normalize). Fitting on raw data
-    # would compute e.g. MAR std=0.026 from outlier-skewed data, producing
-    # normalized MAR values of ~60 for legitimate clipped MAR=2.0.
+    # Fit normalizer on CLIPPED training windows (stride=1, all windows) so
+    # stats are computed on the full distribution regardless of train_stride.
     raw_train_ds = CachedWindowDataset(train_files)      # unnormalized, for clipping
     clipped_train_windows = np.stack(
         [_clip_window(raw_train_ds._windows[i].copy())
          for i in range(len(raw_train_ds))]
     )                                                    # (N, 60, 8) clipped
-    print(f"Train windows : {len(raw_train_ds)} | Val windows (raw count): {len(CachedWindowDataset(val_files))}")
 
     normalizer = FeatureNormalizer()
     normalizer.fit(clipped_train_windows)                # fit on clipped distribution
@@ -250,10 +263,16 @@ def train(
     print(f"Normalizer    : fitted on clipped data, saved to {stats_path}")
     print(normalizer.summary())
 
-    # Rebuild datasets with normalization applied inside __getitem__
-    train_ds = CachedWindowDataset(train_files, normalizer=normalizer)
-    val_ds   = CachedWindowDataset(val_files,   normalizer=normalizer)
-    print(f"Train windows : {len(train_ds)} | Val windows: {len(val_ds)}")
+    # Build train dataset with subsampling to cut 75% window overlap.
+    # Val always uses stride=1 (all windows) for thorough evaluation.
+    effective_overlap = max(0, (Config.WINDOW_SIZE - Config.STRIDE * train_stride)
+                            / Config.WINDOW_SIZE * 100)
+    train_ds = CachedWindowDataset(train_files, normalizer=normalizer,
+                                   subsample_stride=train_stride)
+    val_ds   = CachedWindowDataset(val_files,   normalizer=normalizer,
+                                   subsample_stride=1)
+    print(f"Train windows : {len(train_ds)} (every {train_stride}nd, "
+          f"~{effective_overlap:.0f}% overlap) | Val windows: {len(val_ds)}")
 
     # Wrap training set with on-the-fly augmentations; val stays clean
     aug_train_ds = AugmentedWindowDataset(train_ds)
@@ -346,11 +365,17 @@ def train(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train ALERT FatigueClassifier")
-    parser.add_argument("--val-fold",   type=int,   default=4)
-    parser.add_argument("--epochs",     type=int,   default=Config.MAX_EPOCHS)
-    parser.add_argument("--batch-size", type=int,   default=Config.BATCH_SIZE)
-    parser.add_argument("--lr",         type=float, default=Config.LR)
-    parser.add_argument("--patience",   type=int,   default=Config.PATIENCE)
+    parser.add_argument("--val-fold",    type=int,   default=4)
+    parser.add_argument("--epochs",      type=int,   default=Config.MAX_EPOCHS)
+    parser.add_argument("--batch-size",  type=int,   default=Config.BATCH_SIZE)
+    parser.add_argument("--lr",          type=float, default=Config.LR)
+    parser.add_argument("--patience",    type=int,   default=Config.PATIENCE)
+    parser.add_argument(
+        "--train-stride", type=int, default=2,
+        help="Subsample every Nth window from each cache file to reduce "
+             "temporal redundancy (default=2 → 50%% overlap, ~half dataset size). "
+             "Use 4 for fully independent windows (0%% overlap)."
+    )
     args = parser.parse_args()
 
     train(
@@ -359,4 +384,5 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         lr=args.lr,
         patience=args.patience,
+        train_stride=args.train_stride,
     )
