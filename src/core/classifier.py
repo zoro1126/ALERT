@@ -34,7 +34,7 @@ import torch.nn.functional as F
 
 from core.model import FatigueClassifier
 from training.normalizer import FeatureNormalizer
-from training.trainer import _clip_window
+from training.preprocess import preprocess_window
 from utils.config import Config
 
 
@@ -103,21 +103,31 @@ class RealTimeClassifier:
     # ------------------------------------------------------------------
     def _load_normalizer(self, model_path: Path) -> FeatureNormalizer | None:
         """
-        Load feature_stats.npz from the same directory as the model checkpoint.
-        Returns None (with a warning) if the file doesn't exist — allows
-        fallback to raw features so demo mode still works without a stats file.
+        Load normalizer stats from checkpoint metadata or feature_stats.npz.
         """
+        # First check checkpoint metadata
+        try:
+            ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
+            if "normalizer_stats" in ckpt and isinstance(ckpt["normalizer_stats"], dict):
+                norm = FeatureNormalizer.from_dict(ckpt["normalizer_stats"])
+                print("[RealTimeClassifier] Normalizer loaded from checkpoint metadata.")
+                return norm
+        except Exception:
+            pass
+
+        # Fallback to feature_stats.npz
         stats_path = model_path.parent / "feature_stats.npz"
-        if not stats_path.exists():
-            print(
-                f"[RealTimeClassifier] WARNING: {stats_path} not found.\n"
-                "  Features will NOT be normalized — predictions may be unreliable.\n"
-                "  Re-train the model to generate feature_stats.npz."
-            )
-            return None
-        norm = FeatureNormalizer.load(stats_path)
-        print(f"[RealTimeClassifier] Normalizer loaded from {stats_path}")
-        return norm
+        if stats_path.exists():
+            norm = FeatureNormalizer.load(stats_path)
+            print(f"[RealTimeClassifier] Normalizer loaded from {stats_path}")
+            return norm
+
+        print(
+            f"[RealTimeClassifier] WARNING: {stats_path} not found.\n"
+            "  Features will NOT be normalized — predictions may be unreliable.\n"
+            "  Re-train the model to generate feature_stats.npz."
+        )
+        return None
 
     # ------------------------------------------------------------------
     def update(self, feature_vec: np.ndarray) -> ClassifierResult | None:
@@ -148,10 +158,10 @@ class RealTimeClassifier:
         """Stack buffer → clip → normalize → tensor → model forward → result."""
         window = np.stack(list(self._buffer), axis=0)  # (60, 8) float32
 
-        # Apply the same preprocessing pipeline used during training:
-        #   1. Clip outliers (gimbal-lock EAR spikes, solvePnP Pitch wrapping)
+        # Apply the exact preprocessing pipeline used during training:
+        #   1. Outlier clipping + window-relative median pose centering
         #   2. Z-score normalize using training-set statistics
-        window = _clip_window(window.copy())
+        window = preprocess_window(window)
         if self._normalizer is not None:
             window = self._normalizer.transform_window(window)
 

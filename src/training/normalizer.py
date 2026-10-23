@@ -188,12 +188,29 @@ class FeatureNormalizer:
                 "Call .fit(train_windows) before transforming."
             )
 
+    def to_dict(self) -> dict[str, list[float]]:
+        """Serialize mean and std to a JSON-compatible dict."""
+        self._check_fitted()
+        return {
+            "mean": self.mean_.tolist(),
+            "std":  self.std_.tolist(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, list[float]]) -> "FeatureNormalizer":
+        """Reconstruct a normalizer from a dictionary."""
+        norm = cls()
+        norm.mean_ = np.array(data["mean"], dtype=np.float64)
+        norm.std_  = np.array(data["std"], dtype=np.float64)
+        norm._fitted = True
+        return norm
+
     def summary(self) -> str:
         """Return a human-readable table of per-feature stats."""
         self._check_fitted()
         feat_names = [
             "EAR_L", "EAR_R", "EAR_avg", "MAR",
-            "PERCLOS", "Pitch", "Yaw", "Blink_rate",
+            "PERCLOS", "Pitch_rel", "Yaw_rel", "Blink_rate",
         ]
         lines = [
             f"{'Feature':<12} {'Mean':>10} {'Std':>10}",
@@ -208,3 +225,4 @@ class FeatureNormalizer:
     def __repr__(self) -> str:
         status = "fitted" if self._fitted else "unfitted"
         return f"FeatureNormalizer({status})"
+
