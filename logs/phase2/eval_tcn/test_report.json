@@ -1,0 +1,79 @@
+{
+  "val_fold": 4,
+  "accuracy": 0.4389,
+  "macro_f1": 0.3809,
+  "weighted_f1": 0.3854,
+  "macro_roc_auc": 0.6211,
+  "per_class_roc_auc": {
+    "Alert": 0.5621,
+    "Low Vigilant": 0.6424,
+    "Drowsy": 0.659
+  },
+  "classification_report": {
+    "Alert": {
+      "precision": 0.7936962750716332,
+      "recall": 0.08441261618162425,
+      "f1-score": 0.1525960611486021,
+      "support": 6563.0
+    },
+    "Low Vigilant": {
+      "precision": 0.37718992112794025,
+      "recall": 0.8173018753781004,
+      "f1-score": 0.5161660060174793,
+      "support": 6612.0
+    },
+    "Drowsy": {
+      "precision": 0.5512548603746907,
+      "recall": 0.4154235482152371,
+      "f1-score": 0.4737961415767887,
+      "support": 7508.0
+    },
+    "accuracy": 0.43886283421167144,
+    "macro avg": {
+      "precision": 0.5740470188580881,
+      "recall": 0.43904601325832054,
+      "f1-score": 0.38085273624762334,
+      "support": 20683.0
+    },
+    "weighted avg": {
+      "precision": 0.5725392788031836,
+      "recall": 0.43886283421167144,
+      "f1-score": 0.3854198623054865,
+      "support": 20683.0
+    }
+  },
+  "confusion_matrix_raw": [
+    [
+      554,
+      4559,
+      1450
+    ],
+    [
+      119,
+      5404,
+      1089
+    ],
+    [
+      25,
+      4364,
+      3119
+    ]
+  ],
+  "confusion_matrix_percent": [
+    [
+      8.44,
+      69.47,
+      22.09
+    ],
+    [
+      1.8,
+      81.73,
+      16.47
+    ],
+    [
+      0.33,
+      58.12,
+      41.54
+    ]
+  ]
+}

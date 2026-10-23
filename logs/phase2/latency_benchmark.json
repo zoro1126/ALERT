@@ -1,0 +1,65 @@
+{
+  "bigru": {
+    "parameters": 36819,
+    "estimated_disk_mb": 0.14,
+    "edge_compliant": true,
+    "cpu_benchmark": {
+      "mean_ms": 4.756,
+      "median_ms": 4.667,
+      "p95_ms": 5.508,
+      "p99_ms": 6.742,
+      "min_ms": 3.951,
+      "fps": 210.3
+    },
+    "gpu_benchmark": {
+      "mean_ms": 0.619,
+      "median_ms": 0.471,
+      "p95_ms": 1.126,
+      "p99_ms": 1.556,
+      "min_ms": 0.386,
+      "fps": 1615.2
+    }
+  },
+  "tcn": {
+    "parameters": 71027,
+    "estimated_disk_mb": 0.271,
+    "edge_compliant": true,
+    "cpu_benchmark": {
+      "mean_ms": 5.358,
+      "median_ms": 5.291,
+      "p95_ms": 6.133,
+      "p99_ms": 6.668,
+      "min_ms": 3.705,
+      "fps": 186.6
+    },
+    "gpu_benchmark": {
+      "mean_ms": 2.206,
+      "median_ms": 1.755,
+      "p95_ms": 3.985,
+      "p99_ms": 4.957,
+      "min_ms": 1.476,
+      "fps": 453.3
+    }
+  },
+  "cnn_gru": {
+    "parameters": 17747,
+    "estimated_disk_mb": 0.068,
+    "edge_compliant": true,
+    "cpu_benchmark": {
+      "mean_ms": 1.153,
+      "median_ms": 1.106,
+      "p95_ms": 1.439,
+      "p99_ms": 1.907,
+      "min_ms": 0.989,
+      "fps": 867.3
+    },
+    "gpu_benchmark": {
+      "mean_ms": 0.748,
+      "median_ms": 0.652,
+      "p95_ms": 1.196,
+      "p99_ms": 1.428,
+      "min_ms": 0.558,
+      "fps": 1337.7
+    }
+  }
+}

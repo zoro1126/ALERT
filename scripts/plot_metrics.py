@@ -135,4 +135,15 @@ def generate_training_plots(
 
 
 if __name__ == "__main__":
-    generate_training_plots()
+    import argparse
+    parser = argparse.ArgumentParser(description="Generate ALERT metric plots")
+    parser.add_argument("--metrics", type=str, default=str(_PROJECT_ROOT / "logs" / "training_metrics.json"), help="Path to training_metrics.json")
+    parser.add_argument("--cm", type=str, default=str(_PROJECT_ROOT / "logs" / "confusion_matrix.json"), help="Path to confusion_matrix.json")
+    parser.add_argument("--output-dir", type=str, default=str(_PROJECT_ROOT / "logs" / "plots"), help="Directory to save generated PNG plots")
+    args = parser.parse_args()
+
+    generate_training_plots(
+        metrics_file=Path(args.metrics),
+        cm_file=Path(args.cm),
+        output_dir=Path(args.output_dir),
+    )

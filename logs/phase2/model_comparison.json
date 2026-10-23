@@ -1,0 +1,142 @@
+{
+  "phase": 2,
+  "description": "Architectural Exploration and Edge Latency Benchmarking on authentic UTA-RLDD (Holdout: Fold 4)",
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "cpu": "Intel/AMD Host Processor (single-thread inference B=1)",
+    "mixed_precision": "torch.amp.autocast(fp16)"
+  },
+  "constraints": {
+    "max_parameters": 250000,
+    "max_cpu_latency_ms": 30.0,
+    "max_disk_mb": 2.0
+  },
+  "leaderboard": [
+    {
+      "rank": 1,
+      "arch": "cnn_gru",
+      "model_name": "HybridCNNGRU",
+      "checkpoint": "models/phase2/model_cnn_gru.pt",
+      "parameters": 17747,
+      "disk_mb": 0.068,
+      "latency": {
+        "cpu_mean_ms": 1.153,
+        "cpu_p95_ms": 1.439,
+        "cpu_fps": 867.3,
+        "gpu_mean_ms": 0.748,
+        "gpu_fps": 1337.7,
+        "edge_compliant": true
+      },
+      "holdout_fold4_metrics": {
+        "accuracy": 0.4402,
+        "macro_f1": 0.4057,
+        "weighted_f1": 0.4096,
+        "macro_roc_auc": 0.6152,
+        "class_0_alert": {
+          "precision": 0.5657,
+          "recall": 0.1496,
+          "f1": 0.2367,
+          "roc_auc": 0.5734
+        },
+        "class_1_low_vigilant": {
+          "precision": 0.3689,
+          "recall": 0.7526,
+          "f1": 0.4951,
+          "roc_auc": 0.6136
+        },
+        "class_2_drowsy": {
+          "precision": 0.5766,
+          "recall": 0.4192,
+          "f1": 0.4854,
+          "roc_auc": 0.6587
+        }
+      },
+      "strengths": "Fastest CPU inference (1.15ms / 867 FPS), smallest footprint (17.7k params, 0.07MB), highest overall Macro F1 (0.4057) and Accuracy (44.02%), most balanced class recognition.",
+      "champion_verdict": "Selected as Primary Edge Champion for Phase 3 4-Fold Cross Validation."
+    },
+    {
+      "rank": 2,
+      "arch": "bigru",
+      "model_name": "BiGRUAttention",
+      "checkpoint": "models/phase2/model_bigru.pt",
+      "parameters": 36819,
+      "disk_mb": 0.14,
+      "latency": {
+        "cpu_mean_ms": 4.756,
+        "cpu_p95_ms": 5.508,
+        "cpu_fps": 210.3,
+        "gpu_mean_ms": 0.619,
+        "gpu_fps": 1615.2,
+        "edge_compliant": true
+      },
+      "holdout_fold4_metrics": {
+        "accuracy": 0.4292,
+        "macro_f1": 0.3805,
+        "weighted_f1": 0.3836,
+        "macro_roc_auc": 0.6149,
+        "class_0_alert": {
+          "precision": 0.5781,
+          "recall": 0.1111,
+          "f1": 0.1863,
+          "roc_auc": 0.5716
+        },
+        "class_1_low_vigilant": {
+          "precision": 0.3784,
+          "recall": 0.8005,
+          "f1": 0.5139,
+          "roc_auc": 0.6166
+        },
+        "class_2_drowsy": {
+          "precision": 0.5255,
+          "recall": 0.3804,
+          "f1": 0.4413,
+          "roc_auc": 0.6567
+        }
+      },
+      "strengths": "Strong temporal attention pooling, high Class 1 recall (80.1%) and F1 (0.5139), very fast GPU speed (0.62ms).",
+      "tradeoffs": "Higher latency on CPU (4.76ms) than CNN-GRU due to recurrent bidirectional operations."
+    },
+    {
+      "rank": 3,
+      "arch": "tcn",
+      "model_name": "TCNClassifier",
+      "checkpoint": "models/phase2/model_tcn.pt",
+      "parameters": 71027,
+      "disk_mb": 0.271,
+      "latency": {
+        "cpu_mean_ms": 5.358,
+        "cpu_p95_ms": 6.133,
+        "cpu_fps": 186.6,
+        "gpu_mean_ms": 2.206,
+        "gpu_fps": 453.3,
+        "edge_compliant": true
+      },
+      "holdout_fold4_metrics": {
+        "accuracy": 0.4389,
+        "macro_f1": 0.3809,
+        "weighted_f1": 0.3854,
+        "macro_roc_auc": 0.6211,
+        "class_0_alert": {
+          "precision": 0.7937,
+          "recall": 0.0844,
+          "f1": 0.1526,
+          "roc_auc": 0.5621
+        },
+        "class_1_low_vigilant": {
+          "precision": 0.3772,
+          "recall": 0.8173,
+          "f1": 0.5162,
+          "roc_auc": 0.6424
+        },
+        "class_2_drowsy": {
+          "precision": 0.5513,
+          "recall": 0.4154,
+          "f1": 0.4738,
+          "roc_auc": 0.6590
+        }
+      },
+      "strengths": "Highest Class 1 recall (81.7%) and precision on Alert class (79.4%), pure 1D convolutional parallelism.",
+      "tradeoffs": "Highest parameter count (71.0k) and higher CPU latency (5.36ms) due to multi-layer dilated causal convolutions."
+    }
+  ]
+}

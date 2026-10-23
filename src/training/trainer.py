@@ -35,7 +35,7 @@ from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 
-from core.model import FatigueClassifier
+from core.model import FatigueClassifier, build_model
 from training.augment import AugmentedWindowDataset
 from training.losses import get_criterion
 from training.normalizer import FeatureNormalizer
@@ -233,6 +233,7 @@ def _run_epoch(
 
 def train(
     val_fold:         int   = 4,
+    arch:             str   = "bigru",
     epochs:           int   = Config.MAX_EPOCHS,
     batch_size:       int   = Config.BATCH_SIZE,
     lr:               float = Config.LR,
@@ -250,6 +251,7 @@ def train(
     print("=" * 70)
     print("ALERT — Fatigue Detection Training Engine (CUDA + AMP)")
     print("=" * 70)
+    print(f"Architecture  : {arch.upper()}")
     print(f"Device        : {device} ({torch.cuda.get_device_name(0) if device.type == 'cuda' else 'CPU'})")
     print(f"Mixed Prec.   : {'Enabled (torch.amp.autocast)' if device.type == 'cuda' else 'Disabled'}")
     print(f"Loss Function : {loss_type.upper()} (gamma={focal_gamma})")
@@ -300,7 +302,7 @@ def train(
 
     # --- Model Setup ---
     torch.manual_seed(Config.RANDOM_SEED)
-    model = FatigueClassifier().to(device)
+    model = build_model(arch=arch, n_features=Config.N_FEATURES, n_classes=Config.N_CLASSES).to(device)
     print(f"Model Params  : {model.count_parameters():,} (< 250k edge compliant)")
 
     criterion = get_criterion(
@@ -365,11 +367,13 @@ def train(
                 "val_macro_f1": val_macro_f1,
                 "val_per_class_f1": val_f1s,
                 "config": {
+                    "arch": arch,
                     "n_features": Config.N_FEATURES,
+                    "n_classes": Config.N_CLASSES,
+                    "parameters": model.count_parameters(),
                     "hidden1": Config.HIDDEN_SIZE,
                     "hidden2": Config.HIDDEN_SIZE_2,
                     "fc_size": Config.FC_SIZE,
-                    "n_classes": Config.N_CLASSES,
                 },
                 "normalizer_stats": normalizer.to_dict(),
                 "class_weights": class_weights,
@@ -414,6 +418,7 @@ def train(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train ALERT Fatigue Classifier (PyTorch + CUDA AMP)")
+    parser.add_argument("--arch", type=str, default="bigru", choices=["bigru", "tcn", "cnn_gru"], help="Candidate edge architecture")
     parser.add_argument("--val-fold", type=int, default=4, help="Validation holdout fold (default: 4)")
     parser.add_argument("--epochs", type=int, default=Config.MAX_EPOCHS, help="Maximum epochs")
     parser.add_argument("--batch-size", type=int, default=Config.BATCH_SIZE, help="Batch size")
@@ -423,12 +428,17 @@ if __name__ == "__main__":
     parser.add_argument("--loss", type=str, default="focal", choices=["focal", "ce"], help="Loss function")
     parser.add_argument("--gamma", type=float, default=2.0, help="Focal loss gamma parameter")
     parser.add_argument("--class-weights", type=str, default="1.0,2.0,1.2", help="Comma-separated class weights (Alert,LowVig,Drowsy)")
+    parser.add_argument("--model-path", type=str, default=None, help="Custom model checkpoint save path")
+    parser.add_argument("--log-path", type=str, default=None, help="Custom training log save path")
     args = parser.parse_args()
 
     weights = [float(w.strip()) for w in args.class_weights.split(",")] if args.class_weights else None
+    m_path = Path(args.model_path) if args.model_path else Path(Config.MODEL_PATH)
+    l_path = Path(args.log_path) if args.log_path else Path(Config.TRAINING_LOG)
 
     train(
         val_fold=args.val_fold,
+        arch=args.arch,
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
@@ -437,4 +447,6 @@ if __name__ == "__main__":
         loss_type=args.loss,
         focal_gamma=args.gamma,
         class_weights=weights,
+        model_path=m_path,
+        log_path=l_path,
     )

@@ -30,7 +30,7 @@ from sklearn.metrics import classification_report, roc_auc_score
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 
-from core.model import FatigueClassifier
+from core.model import FatigueClassifier, build_model
 from training.normalizer import FeatureNormalizer
 from training.trainer import CachedWindowDataset, _split_cache_files
 from utils.config import Config
@@ -65,15 +65,15 @@ def evaluate(
     ckpt = torch.load(model_path, map_location=device, weights_only=False)
     cfg = ckpt.get("config", {})
 
-    model = FatigueClassifier(
+    arch = cfg.get("arch", "bigru")
+    model = build_model(
+        arch=arch,
         n_features=cfg.get("n_features", Config.N_FEATURES),
-        hidden1=cfg.get("hidden1", Config.HIDDEN_SIZE),
-        hidden2=cfg.get("hidden2", Config.HIDDEN_SIZE_2),
-        fc_size=cfg.get("fc_size", Config.FC_SIZE),
         n_classes=cfg.get("n_classes", Config.N_CLASSES),
     ).to(device)
     model.load_state_dict(ckpt["model_state"])
     model.eval()
+    print(f"Architecture: {arch.upper()} ({model.count_parameters():,} parameters)")
 
     epoch_trained = ckpt.get("epoch", "?")
     best_loss = ckpt.get("val_loss", 0.0)
@@ -234,7 +234,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate ALERT Fatigue Detection Model")
     parser.add_argument("--val-fold", type=int, default=4, help="Held-out validation fold")
     parser.add_argument("--model", type=str, default=str(Config.MODEL_PATH), help="Path to model .pt")
+    parser.add_argument("--log-dir", type=str, default=str(Config.LOG_DIR), help="Directory to save evaluation reports")
     parser.add_argument("--batch-size", type=int, default=256, help="Batch size for evaluation")
     args = parser.parse_args()
 
-    evaluate(val_fold=args.val_fold, model_path=Path(args.model), batch_size=args.batch_size)
+    evaluate(val_fold=args.val_fold, model_path=Path(args.model), log_dir=Path(args.log_dir), batch_size=args.batch_size)
