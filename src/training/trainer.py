@@ -119,11 +119,20 @@ class CachedWindowDataset(Dataset):
 def _split_cache_files(
     cache_dir: Path,
     val_fold: int,
+    expected_features: int = Config.N_FEATURES,
 ) -> tuple[list[Path], list[Path]]:
-    """Split .npz files in cache_dir by fold number encoded in filename."""
-    all_files = sorted(cache_dir.glob("fold*.npz"))
-    train = [p for p in all_files if not p.name.startswith(f"fold{val_fold}_")]
-    val   = [p for p in all_files if p.name.startswith(f"fold{val_fold}_")]
+    """Split .npz files in cache_dir by fold number, filtering only valid 12-feature files."""
+    valid_files = []
+    for p in sorted(cache_dir.glob("fold*.npz")):
+        try:
+            with np.load(p, mmap_mode="r") as d:
+                if d["windows"].ndim == 3 and d["windows"].shape[-1] == expected_features:
+                    valid_files.append(p)
+        except Exception:
+            continue
+
+    train = [p for p in valid_files if not p.name.startswith(f"fold{val_fold}_")]
+    val   = [p for p in valid_files if p.name.startswith(f"fold{val_fold}_")]
     return train, val
 
 
@@ -239,7 +248,7 @@ def train(
     lr:               float = Config.LR,
     patience:         int   = Config.PATIENCE,
     train_stride:     int   = 2,
-    loss_type:        str   = "focal",
+    loss_type:        str   = "ordinal",
     focal_gamma:      float = 2.0,
     class_weights:    list[float] | None = None,
     cache_dir:        Path  = Path(Config.CACHE_DIR),
@@ -249,7 +258,7 @@ def train(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("=" * 70)
-    print("ALERT — Fatigue Detection Training Engine (CUDA + AMP)")
+    print("ALERT - Fatigue Detection Training Engine (CUDA + AMP)")
     print("=" * 70)
     print(f"Architecture  : {arch.upper()}")
     print(f"Device        : {device} ({torch.cuda.get_device_name(0) if device.type == 'cuda' else 'CPU'})")
@@ -257,9 +266,9 @@ def train(
     print(f"Loss Function : {loss_type.upper()} (gamma={focal_gamma})")
     print(f"Train Stride  : {train_stride} (subsample overlap reduction)")
 
-    # Default cost-sensitive class weights: [Alert=1.0, LowVigilant=2.0, Drowsy=1.2]
+    # Default cost-sensitive class weights: [Alert=1.0, LowVigilant=1.15, Drowsy=1.10]
     if class_weights is None:
-        class_weights = [1.0, 2.0, 1.2]
+        class_weights = [1.0, 1.15, 1.10]
     weights_tensor = torch.tensor(class_weights, dtype=torch.float32, device=device)
     print(f"Class Weights : Alert={class_weights[0]}, LowVig={class_weights[1]}, Drowsy={class_weights[2]}")
 
@@ -309,7 +318,7 @@ def train(
         loss_name=loss_type,
         class_weights=weights_tensor,
         gamma=focal_gamma,
-        label_smoothing=0.05,
+        label_smoothing=0.08,
     )
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=Config.WEIGHT_DECAY)
     scheduler = CosineAnnealingLR(optimizer, T_max=Config.COSINE_T_MAX, eta_min=1e-6)
