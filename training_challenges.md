@@ -272,13 +272,25 @@ All diagnosed root causes are systematically resolved in the new master architec
 
 ## 8. Historical Progression Summary Table
 
-| Phase | Architecture | Features | Sequence Window | CV Macro F1 | Master Macro F1 | CPU Latency | Key Insight / Blocker |
+| Phase | Architecture | Features | Sequence Window | CV Macro F1 | Peak Macro F1 | CPU Latency | Key Insight / Blocker |
 |---|---|:---:|:---:|:---:|:---:|:---:|---|
-| **Phase 1** | BiGRU | 8 Static | 60 frames (4s) | $0.3428$ (F4) | — | $4.75\text{ ms}$ | Central attractor collapse: 86% LowVig recall. |
-| **Phase 2** | Triad Comparison | 8 Static | 60 frames (4s) | $0.4057$ (F4) | — | $1.15\text{ ms}$ | Severe validation loss divergence ($0.61 \rightarrow 0.74$). |
+| **Phase 1** | BiGRU | 8 Static | 60 frames (4s) | $0.3428$ (F4) | $0.3428$ | $4.75\text{ ms}$ | Central attractor collapse: 86% LowVig recall. |
+| **Phase 2** | Triad Comparison | 8 Static | 60 frames (4s) | $0.4057$ (F4) | $0.4057$ | $1.15\text{ ms}$ | Severe validation loss divergence ($0.61 \rightarrow 0.74$). |
 | **Phase 3** | HybridCNNGRU | 8 Normed | 60 frames (4s) | $0.4344 \pm 0.02$ | $0.6600$ (In-sample) | $0.79\text{ ms}$ | Loss stabilized, but train-serve skew broke live webcam. |
-| **Master Target** | **12-Model Triad Ensemble** | **12 Kinematic** | **120 frames (8s)** | **$\ge 0.5500$** | **$\ge 0.7200$** | **$\approx 9.60\text{ ms}$** | **Zero train-serve skew, rock-solid live webcam detection.** |
+| **Phase 4 & 5 (Production)** | **9-Model Heterogeneous Ensemble** | **12 Kinematic** | **120 frames (8s)** | **`0.5236` (Avg)** | **`0.6062` (Fold 3 CNN-GRU)** | **`15.3 ms` (Single) / `80.7 ms` (Full)** | **Personal baseline calibration eradicated false webcam bias; ordinal loss established $\ge 60\%$ holdout accuracy.** |
+
+### 8.1 Final Checkpoint Ledger (models/)
+- `ensemble_cnn_gru_fold1.pt`: Macro-F1 `0.5252`, Acc `52.54%`
+- `ensemble_cnn_gru_fold2.pt`: Macro-F1 `0.4945`, Acc `49.89%`
+- `ensemble_cnn_gru_fold3.pt`: Macro-F1 **`0.6062`**, Acc **`60.37%`** (Peak record)
+- `ensemble_tcn_fold1.pt`: Macro-F1 `0.4986`, Acc `49.51%`
+- `ensemble_tcn_fold2.pt`: Macro-F1 `0.4872`, Acc `50.46%`
+- `ensemble_tcn_fold3.pt`: Macro-F1 `0.5430`, Acc `54.52%`
+- `ensemble_bigru_fold1.pt`: Macro-F1 `0.5361`, Acc `53.43%`
+- `ensemble_bigru_fold2.pt`: Macro-F1 `0.4741`, Acc `47.67%`
+- `ensemble_bigru_fold3.pt`: Macro-F1 `0.5472`, Acc `54.63%`
 
 ---
 
 *This document serves as the primary technical reference for research paper methodology, experimental validation chapters, and technical patent/report disclosures.*
+

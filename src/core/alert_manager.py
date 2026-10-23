@@ -155,6 +155,29 @@ class AlertManager:
         return self.state
 
     # ------------------------------------------------------------------
+    def update_from_alarm_level(self, alarm_level: int) -> AlertState:
+        """
+        Update alert state directly from debounced alarm level:
+        0 = NORMAL, 1 = WARNING, 2 = CRITICAL.
+        """
+        mapping = {0: AlertState.NORMAL, 1: AlertState.WARNING, 2: AlertState.CRITICAL}
+        new_state = mapping.get(int(alarm_level), AlertState.NORMAL)
+        now = time.monotonic()
+
+        if new_state != self.state:
+            self.state = new_state
+            if self._on_state_change:
+                self._on_state_change(new_state)
+            self._trigger_audio(new_state, now)
+            self._last_audio_at = now
+        elif new_state == AlertState.CRITICAL:
+            if now - self._last_audio_at >= Config.ALERT_DEBOUNCE_CRITICAL:
+                self._trigger_audio(new_state, now)
+                self._last_audio_at = now
+
+        return self.state
+
+    # ------------------------------------------------------------------
     def _compute_state(self, class_index: int, now: float) -> AlertState:
         """Pure state-transition logic (no side effects)."""
         if class_index == 2:

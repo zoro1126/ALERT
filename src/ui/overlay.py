@@ -84,6 +84,7 @@ def draw_status_bar(
     state: AlertState,
     label: str,
     confidence: float,
+    model_tag: str | None = None,
 ) -> None:
     """
     Draw an alert state pill at the top of the frame.
@@ -94,14 +95,19 @@ def draw_status_bar(
     state      : current AlertState
     label      : e.g. 'Drowsy'
     confidence : 0–1 float, model probability for predicted class
+    model_tag  : optional header badge e.g. '9-Model Ensemble'
     """
     h, w = frame.shape[:2]
-    color = _STATE_COLOR[state]
+    color = _STATE_COLOR.get(state, _C_GREEN)
     _blend_rect(frame, 0, 0, w, 44, _C_BLACK, alpha=0.55)
     cv2.rectangle(frame, (0, 0), (w, 44), color, 2)
 
     status_text = f"[{state.value}]  {label}  ({confidence:.0%})"
-    _text(frame, status_text, 12, 28, color, scale=0.75, thickness=2)
+    _text(frame, status_text, 12, 28, color, scale=0.72, thickness=2)
+
+    if model_tag:
+        tag_x = max(w - 220, 350)
+        _text(frame, model_tag, tag_x, 28, _C_CYAN, scale=0.55, thickness=1)
 
 
 def draw_feature_panel(
@@ -110,12 +116,16 @@ def draw_feature_panel(
     mar: float, perclos: float,
     pitch: float, yaw: float, blink_rate: float,
     ear_threshold: float = Config.EAR_THRESHOLD,
+    d_ear: float | None = None,
+    d_pitch: float | None = None,
+    blink_dur: float | None = None,
 ) -> None:
     """Draw a feature readout panel on the left side of the frame."""
     x0, y0 = 8, 60
-    line_h  = 22
+    line_h  = 20
+    n_rows = 8 + (1 if d_ear is not None else 0) + (1 if blink_dur is not None else 0)
 
-    _blend_rect(frame, x0 - 4, y0 - 16, x0 + 200, y0 + line_h * 8, _C_BLACK)
+    _blend_rect(frame, x0 - 4, y0 - 16, x0 + 205, y0 + line_h * n_rows + 4, _C_BLACK)
 
     rows = [
         (f"EAR L: {ear_l:.3f}",    _C_RED   if ear_l   < ear_threshold else _C_WHITE),
@@ -123,12 +133,17 @@ def draw_feature_panel(
         (f"EAR  : {ear_avg:.3f}",  _C_RED   if ear_avg < ear_threshold else _C_CYAN),
         (f"MAR  : {mar:.3f}",      _C_ORANGE if mar > Config.MAR_THRESHOLD else _C_WHITE),
         (f"PERC : {perclos:.2f}",  _C_RED   if perclos > Config.PERCLOS_WARNING else _C_WHITE),
-        (f"Pitch: {pitch:+.1f}°",  _C_ORANGE if abs(pitch) > Config.HEAD_PITCH_THRESHOLD else _C_WHITE),
-        (f"Yaw  : {yaw:+.1f}°",    _C_WHITE),
+        (f"Pitch: {pitch:+.1f} deg",  _C_ORANGE if abs(pitch) > Config.HEAD_PITCH_THRESHOLD else _C_WHITE),
+        (f"Yaw  : {yaw:+.1f} deg",    _C_WHITE),
         (f"Blink: {blink_rate:.1f}/s", _C_WHITE),
     ]
+    if d_ear is not None:
+        rows.append((f"dEAR : {d_ear:+.2f}/s", _C_CYAN if abs(d_ear) > 0.05 else _C_WHITE))
+    if blink_dur is not None:
+        rows.append((f"BDur : {blink_dur*1000:.0f}ms", _C_ORANGE if blink_dur > 0.25 else _C_WHITE))
+
     for i, (msg, color) in enumerate(rows):
-        _text(frame, msg, x0, y0 + i * line_h, color)
+        _text(frame, msg, x0, y0 + i * line_h, color, scale=0.48)
 
 
 def draw_warmup_bar(frame: np.ndarray, fill: float) -> None:

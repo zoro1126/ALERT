@@ -317,10 +317,11 @@ class EnsembleFatigueClassifier:
             model.load_state_dict(state_dict)
             model.eval()
 
-            norm = FeatureNormalizer()
             if "normalizer_mean" in ckpt and "normalizer_std" in ckpt:
-                norm.mean_ = np.array(ckpt["normalizer_mean"], dtype=np.float32)
-                norm.std_ = np.array(ckpt["normalizer_std"], dtype=np.float32)
+                norm = FeatureNormalizer()
+                norm.mean_ = np.array(ckpt["normalizer_mean"], dtype=np.float64)
+                norm.std_ = np.array(ckpt["normalizer_std"], dtype=np.float64)
+                norm._fitted = True
             else:
                 stats_p = path.with_name(path.stem + "_stats.npz")
                 if stats_p.exists():

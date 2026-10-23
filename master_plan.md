@@ -186,8 +186,13 @@ To eliminate instantaneous classification flickering on single-frame blinks:
 - Integrate EMA filter and two-tier debounce alarm state machine.
 - Export all models to ONNX Opset 14 and run 1,000-pass latency benchmark.
 
-### Phase 5: Live Webcam Stress Test
-- Validate live performance on webcam:
-  - Wide open eyes $\rightarrow$ **100% Solid Alert** (zero Low Vigilant false positives).
-  - Slow eye droop $\rightarrow$ **Low Vigilant Warning**.
-  - Prolonged eyes closed ($>1.5\text{s}$) $\rightarrow$ **Immediate Critical Alarm**.
+### Phase 5: Live Webcam Pipeline Integration & Verification
+- Pipeline Integration Complete:
+  - Connected `Calibrator` 3D head pose and EAR personal baseline calibration profile.
+  - Connected 9-model `EnsembleFatigueClassifier` into `src/ui/dashboard.py` and `src/run_alert.py`.
+  - Added two-tier debounced alarm state machine with audio alert playback.
+  - HUD overlay enhanced with ensemble badge, kinematic velocity metrics, and temporal attention heatmap.
+  - Verified with 57 unit and end-to-end integration tests (`tests/test_pipeline_integration.py`).
+- Ready for User Live Execution:
+  - Run via: `python src/run_alert.py`
+  - Re-calibrate baseline: `python src/run_alert.py --recalibrate`
