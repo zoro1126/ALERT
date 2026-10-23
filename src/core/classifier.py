@@ -32,7 +32,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from core.model import FatigueClassifier
+from core.model import FatigueClassifier, build_model
 from training.normalizer import FeatureNormalizer
 from training.preprocess import preprocess_window
 from utils.config import Config
@@ -81,22 +81,39 @@ class RealTimeClassifier:
         self._normalizer = self._load_normalizer(Path(model_path))
 
     # ------------------------------------------------------------------
-    def _load_model(self, path: Path) -> FatigueClassifier:
+    def _load_model(self, path: Path):
         if not path.exists():
             raise FileNotFoundError(
                 f"Model checkpoint not found: {path}\n"
                 "Train the model first:  python -m training.trainer"
             )
-        ckpt = torch.load(path, map_location=self.device)
+        ckpt = torch.load(path, map_location=self.device, weights_only=False)
         cfg  = ckpt.get("config", {})
-        model = FatigueClassifier(
-            n_features = cfg.get("n_features", Config.N_FEATURES),
-            hidden1    = cfg.get("hidden1",    Config.HIDDEN_SIZE),
-            hidden2    = cfg.get("hidden2",    Config.HIDDEN_SIZE_2),
-            fc_size    = cfg.get("fc_size",    Config.FC_SIZE),
-            n_classes  = cfg.get("n_classes",  Config.N_CLASSES),
-        ).to(self.device)
-        model.load_state_dict(ckpt["model_state"])
+        arch = cfg.get("arch", "cnn_gru")
+        model_kwargs = {
+            k: v for k, v in cfg.items()
+            if k not in ("arch", "parameters", "n_features", "n_classes")
+        }
+
+        try:
+            model = build_model(
+                arch=arch,
+                n_features=cfg.get("n_features", Config.N_FEATURES),
+                n_classes=cfg.get("n_classes", Config.N_CLASSES),
+                **model_kwargs,
+            ).to(self.device)
+            model.load_state_dict(ckpt["model_state"])
+        except Exception:
+            # Fallback for legacy checkpoints
+            model = FatigueClassifier(
+                n_features=cfg.get("n_features", Config.N_FEATURES),
+                hidden1=cfg.get("hidden1", Config.HIDDEN_SIZE),
+                hidden2=cfg.get("hidden2", Config.HIDDEN_SIZE_2),
+                fc_size=cfg.get("fc_size", Config.FC_SIZE),
+                n_classes=cfg.get("n_classes", Config.N_CLASSES),
+            ).to(self.device)
+            model.load_state_dict(ckpt["model_state"])
+
         model.eval()
         return model
 

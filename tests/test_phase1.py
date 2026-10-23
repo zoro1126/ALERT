@@ -12,7 +12,53 @@ import torch
 
 from training.losses import FocalLoss, get_criterion
 from training.normalizer import FeatureNormalizer
-from training.preprocess import center_head_pose, clip_window, preprocess_window
+from training.preprocess import (
+    adaptive_ear_normalization,
+    center_head_pose,
+    clip_window,
+    preprocess_window,
+)
+
+
+def test_adaptive_ear_normalization():
+    """EAR columns should be scaled relative to each window's 90th-percentile."""
+    # Simulate a narrow-eyed subject: resting EAR = 0.22 (would look "drowsy" globally)
+    window = np.zeros((60, 8), dtype=np.float32)
+    window[:, 0] = 0.22   # EAR_L constant
+    window[:, 1] = 0.22   # EAR_R constant
+    window[:, 2] = 0.22   # EAR_avg constant
+    # 5 blink frames (eyes half-closed)
+    window[10:15, :3] = 0.10
+
+    normed = adaptive_ear_normalization(window.copy())
+
+    # p90 of EAR_avg ≈ 0.22; after division most frames should be ≈ 1.0
+    open_frames = np.delete(normed[:, 2], list(range(10, 15)))
+    assert np.allclose(open_frames, open_frames[0], atol=0.01), \
+        "Open-eye frames should normalize to same relative value"
+
+    # Blink frames should be less than open frames (ratio preserved)
+    assert normed[10, 2] < normed[0, 2], "Blink frames must remain smaller than open frames"
+
+    # Values should be positive
+    assert (normed[:, :3] >= 0).all(), "Normalized EAR must be non-negative"
+
+
+def test_preprocess_pipeline_order():
+    """preprocess_window must clip → EAR normalize → head pose center."""
+    rng = np.random.default_rng(42)
+    window = rng.uniform(0.0, 0.5, size=(60, 8)).astype(np.float32)
+    window[:, 5] = 30.0  # large static yaw offset
+    window[:, 6] = -15.0
+
+    result = preprocess_window(window)
+
+    # Head pose should be centered to near-zero median
+    assert abs(np.median(result[:, 5])) < 0.01
+    assert abs(np.median(result[:, 6])) < 0.01
+
+    # EAR columns should be positive
+    assert (result[:, :3] >= 0).all()
 
 
 def test_clip_window():

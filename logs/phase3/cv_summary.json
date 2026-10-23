@@ -1,0 +1,85 @@
+{
+  "architecture": "cnn_gru",
+  "folds": [
+    {
+      "val_fold": 1,
+      "best_macro_f1": 0.4024,
+      "best_val_loss": 0.5367457397847262,
+      "total_epochs": 20,
+      "model_path": "C:\\Study Material And Projects\\Sem 7\\Alert\\models\\phase3\\fold1_cnn_gru.pt",
+      "eval_macro_f1": 0.4024,
+      "eval_accuracy": 0.4052,
+      "per_class_roc_auc": {
+        "Alert": 0.6344,
+        "Low Vigilant": 0.516,
+        "Drowsy": 0.6398
+      }
+    },
+    {
+      "val_fold": 2,
+      "best_macro_f1": 0.4495,
+      "best_val_loss": 0.5621842511301532,
+      "total_epochs": 17,
+      "model_path": "C:\\Study Material And Projects\\Sem 7\\Alert\\models\\phase3\\fold2_cnn_gru.pt",
+      "eval_macro_f1": 0.4495,
+      "eval_accuracy": 0.4541,
+      "per_class_roc_auc": {
+        "Alert": 0.5524,
+        "Low Vigilant": 0.6297,
+        "Drowsy": 0.6207
+      }
+    },
+    {
+      "val_fold": 3,
+      "best_macro_f1": 0.4584,
+      "best_val_loss": 0.568027701198142,
+      "total_epochs": 60,
+      "model_path": "C:\\Study Material And Projects\\Sem 7\\Alert\\models\\phase3\\fold3_cnn_gru.pt",
+      "eval_macro_f1": 0.4584,
+      "eval_accuracy": 0.4568,
+      "per_class_roc_auc": {
+        "Alert": 0.6546,
+        "Low Vigilant": 0.5248,
+        "Drowsy": 0.6607
+      }
+    },
+    {
+      "val_fold": 4,
+      "best_macro_f1": 0.4274,
+      "best_val_loss": 0.5711552083163752,
+      "total_epochs": 21,
+      "model_path": "C:\\Study Material And Projects\\Sem 7\\Alert\\models\\phase3\\fold4_cnn_gru.pt",
+      "eval_macro_f1": 0.4274,
+      "eval_accuracy": 0.4328,
+      "per_class_roc_auc": {
+        "Alert": 0.5954,
+        "Low Vigilant": 0.6229,
+        "Drowsy": 0.6557
+      }
+    }
+  ],
+  "cv_macro_f1_mean": 0.4344,
+  "cv_macro_f1_std": 0.0217,
+  "cv_macro_f1_per_fold": {
+    "fold1": 0.4024,
+    "fold2": 0.4495,
+    "fold3": 0.4584,
+    "fold4": 0.4274
+  },
+  "hparams": {
+    "arch": "cnn_gru",
+    "dropout": 0.4,
+    "weight_decay": 0.01,
+    "train_stride": 4,
+    "label_smoothing": 0.1,
+    "class_weights": [
+      1.0,
+      1.25,
+      1.1
+    ],
+    "focal_gamma": 2.0,
+    "lr": 0.0003,
+    "epochs_budget": 60,
+    "patience": 15
+  }
+}
