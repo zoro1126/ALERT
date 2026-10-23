@@ -23,13 +23,14 @@ from core.model import (
     TCNClassifier,
     build_model,
 )
+from utils.config import Config
 
 
 @pytest.mark.parametrize("arch", ["bigru", "tcn", "cnn_gru"])
 def test_architecture_forward_shape(arch):
     batch_size = 8
-    seq_len = 60
-    n_features = 8
+    seq_len = Config.WINDOW_SIZE
+    n_features = Config.N_FEATURES
     n_classes = 3
 
     model = build_model(arch=arch, n_features=n_features, n_classes=n_classes)
@@ -57,7 +58,7 @@ def test_gradient_flow(arch):
     model = build_model(arch=arch)
     model.train()
 
-    x = torch.randn(4, 60, 8, requires_grad=True)
+    x = torch.randn(4, Config.WINDOW_SIZE, Config.N_FEATURES, requires_grad=True)
     logits, _ = model(x)
     loss = logits.sum()
     loss.backward()
@@ -72,7 +73,7 @@ def test_gradient_flow(arch):
 @pytest.mark.parametrize("arch", ["bigru", "tcn", "cnn_gru"])
 def test_predict_proba(arch):
     model = build_model(arch=arch)
-    x = torch.randn(4, 60, 8)
+    x = torch.randn(4, Config.WINDOW_SIZE, Config.N_FEATURES)
     probs = model.predict_proba(x)
 
     assert probs.shape == (4, 3)
@@ -82,15 +83,15 @@ def test_predict_proba(arch):
 
 
 def test_tcn_receptive_field_coverage():
-    # TCN must cover >= 60 frames
-    tcn = TCNClassifier(kernel_size=3, channels=[32, 48, 64, 64])
-    # Dilation: 1, 2, 4, 8 -> RF = 1 + 2*(3-1)*(1+2+4+8) = 61 frames
-    assert tcn.count_parameters() < 100_000
+    # TCN must cover >= 120 frames
+    tcn = TCNClassifier(kernel_size=3, channels=[32, 48, 64, 64, 64])
+    # Dilation: 1, 2, 4, 8, 16 -> RF = 1 + 2*(3-1)*(1+2+4+8+16) = 125 frames
+    assert tcn.count_parameters() < 150_000
 
 
 def test_fatigue_classifier_backward_compatibility():
     model = FatigueClassifier()
-    x = torch.randn(2, 60, 8)
+    x = torch.randn(2, Config.WINDOW_SIZE, Config.N_FEATURES)
     logits, attn = model(x)
     assert logits.shape == (2, 3)
-    assert attn.shape == (2, 60)
+    assert attn.shape == (2, Config.WINDOW_SIZE)

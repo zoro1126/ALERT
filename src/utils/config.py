@@ -46,7 +46,21 @@ class Config:
     # Feature extraction                                                   #
     # ------------------------------------------------------------------ #
     TARGET_FPS: int = 15        # Downsample videos to this rate for extraction
-    N_FEATURES: int = 8         # [EAR_L, EAR_R, EAR_avg, MAR, PERCLOS, pitch, yaw, blink_rate]
+    N_FEATURES: int = 12        # 12 kinematic channels (Phase 1 master plan)
+    FEATURE_NAMES: list[str] = [
+        "ear_left_rel",
+        "ear_right_rel",
+        "ear_avg_rel",
+        "d_ear_dt",
+        "mar",
+        "d_mar_dt",
+        "perclos_calib",
+        "head_pitch_rel",
+        "d_pitch_dt",
+        "head_yaw_rel",
+        "blink_rate",
+        "blink_duration",
+    ]
 
     # MediaPipe FaceMesh
     MEDIAPIPE_MAX_FACES: int = 1
@@ -57,13 +71,13 @@ class Config:
     # ------------------------------------------------------------------ #
     # Sliding window                                                       #
     # ------------------------------------------------------------------ #
-    WINDOW_SIZE: int = 60       # frames per sequence fed to model (~2s at 30fps)
-    STRIDE: int = 15            # sliding window stride during feature extraction
+    WINDOW_SIZE: int = 120      # frames per sequence fed to model (8.0s at 15 FPS)
+    STRIDE: int = 15            # sliding window stride during feature extraction (1.0s)
 
     # ------------------------------------------------------------------ #
     # Fatigue thresholds (fallbacks — overridden by adaptive calibration)  #
     # ------------------------------------------------------------------ #
-    EAR_THRESHOLD: float = 0.25         # below → eye considered closed
+    EAR_THRESHOLD: float = 0.25         # fallback eye closed threshold
     MAR_THRESHOLD: float = 0.60         # above → yawn detected
     PERCLOS_WARNING: float = 0.15       # 15 % closure in window → Warning
     PERCLOS_CRITICAL: float = 0.30      # 30 % closure in window → Critical
@@ -72,7 +86,7 @@ class Config:
     # Adaptive calibration multipliers
     EAR_CALIB_MULTIPLIER: float = 0.75  # threshold = baseline * this
     MAR_CALIB_MULTIPLIER: float = 2.00  # yawn threshold = baseline * this
-    CALIBRATION_SECONDS: int = 10       # duration of baseline capture
+    CALIBRATION_SECONDS: int = 15       # duration of baseline capture (15s)
 
     # ------------------------------------------------------------------ #
     # Alert timing                                                         #

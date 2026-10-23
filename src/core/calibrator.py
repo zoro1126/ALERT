@@ -58,13 +58,23 @@ class Calibrator:
         self.multiplier = multiplier
         self.save_path  = save_path
         self._samples:  list[float] = []
+        self._pitch_samples: list[float] = []
+        self._yaw_samples:   list[float] = []
         self._threshold: float | None = None
+        self._profile: dict | None = None
 
     # ------------------------------------------------------------------
-    def add_frame(self, ear_avg: float) -> None:
-        """Add one frame's EAR_avg reading during the calibration window."""
+    def add_frame(
+        self,
+        ear_avg: float,
+        pitch: float = 0.0,
+        yaw: float = 0.0,
+    ) -> None:
+        """Add one frame's EAR_avg and head pose readings during calibration."""
         if not self.is_ready():
-            self._samples.append(ear_avg)
+            self._samples.append(float(ear_avg))
+            self._pitch_samples.append(float(pitch))
+            self._yaw_samples.append(float(yaw))
 
     # ------------------------------------------------------------------
     def is_ready(self) -> bool:
@@ -79,7 +89,7 @@ class Calibrator:
     # ------------------------------------------------------------------
     def finalize(self) -> float:
         """
-        Compute threshold, save to disk, and return the value.
+        Compute threshold and baselines, save to disk, and return the threshold.
 
         Returns
         -------
@@ -93,13 +103,19 @@ class Calibrator:
         threshold = max(mean * self.multiplier, Config.EAR_THRESHOLD * 0.5)
         self._threshold = threshold
 
+        pitch_base = statistics.median(self._pitch_samples) if self._pitch_samples else 0.0
+        yaw_base = statistics.median(self._yaw_samples) if self._yaw_samples else 0.0
+
         self.save_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "ear_threshold": round(threshold, 5),
             "ear_open_mean": round(mean, 5),
             "ear_open_std":  round(std,  5),
+            "pitch_base":    round(pitch_base, 3),
+            "yaw_base":      round(yaw_base, 3),
             "n_frames":      len(self._samples),
         }
+        self._profile = payload
         self.save_path.write_text(json.dumps(payload, indent=2))
         return threshold
 
@@ -120,7 +136,31 @@ class Calibrator:
             return None
 
     # ------------------------------------------------------------------
+    @staticmethod
+    def load_profile(save_path: Path = Path(Config.CALIBRATION_PATH)) -> dict | None:
+        """
+        Load full calibration profile (EAR and head pose baselines).
+
+        Returns
+        -------
+        dict with keys: ear_threshold, ear_base, pitch_base, yaw_base, or None.
+        """
+        try:
+            data = json.loads(save_path.read_text())
+            return {
+                "ear_threshold": float(data.get("ear_threshold", Config.EAR_THRESHOLD)),
+                "ear_base": float(data.get("ear_open_mean", 0.30)),
+                "pitch_base": float(data.get("pitch_base", 0.0)),
+                "yaw_base": float(data.get("yaw_base", 0.0)),
+            }
+        except (FileNotFoundError, KeyError, ValueError, json.JSONDecodeError):
+            return None
+
+    # ------------------------------------------------------------------
     def reset(self) -> None:
         """Clear samples — allows re-running calibration in the same session."""
         self._samples.clear()
+        self._pitch_samples.clear()
+        self._yaw_samples.clear()
         self._threshold = None
+        self._profile = None

@@ -243,11 +243,11 @@ class CausalConv1dBlock(nn.Module):
 
 class TCNClassifier(BaseEdgeModel):
     """
-    Temporal Convolutional Network for Driver Fatigue Detection (~45k parameters).
+    Temporal Convolutional Network for Driver Fatigue Detection (~95k parameters).
 
     Receptive Field:
-      Kernel 3, Dilations [1, 2, 4, 8] -> RF = 1 + 2*(3-1)*(1+2+4+8) = 61 frames
-      Fully covers the 60-frame window with 0 recurrent state overhead.
+      Kernel 3, Dilations [1, 2, 4, 8, 16] -> RF = 1 + 2*(3-1)*(1+2+4+8+16) = 125 frames
+      Fully covers the 120-frame window with 0 recurrent state overhead.
     """
 
     def __init__(
@@ -264,9 +264,9 @@ class TCNClassifier(BaseEdgeModel):
         self.arch_name = "tcn"
 
         if channels is None:
-            channels = [32, 48, 64, 64]
+            channels = [32, 48, 64, 64, 64]
 
-        # Dilations: 1, 2, 4, 8
+        # Dilations: 1, 2, 4, 8, 16
         dilations = [2 ** i for i in range(len(channels))]
 
         blocks = []

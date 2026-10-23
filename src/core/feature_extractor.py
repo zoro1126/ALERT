@@ -58,23 +58,62 @@ _RIGHT_MOUTH = 291
 
 
 class FrameFeatures(NamedTuple):
-    """All computed features for a single frame."""
-    ear_left: float
-    ear_right: float
-    ear_avg: float
+    """All computed features for a single frame (12 kinematic channels)."""
+    ear_left_rel: float
+    ear_right_rel: float
+    ear_avg_rel: float
+    d_ear_dt: float
     mar: float
-    perclos: float       # requires a FeatureExtractor instance (rolling buffer)
-    head_pitch: float    # degrees; down is positive
-    head_yaw: float      # degrees; right is positive
-    blink_rate: float    # blinks/second over rolling buffer
+    d_mar_dt: float
+    perclos_calib: float       # Calibrated PERCLOS (% frames below 0.75 * ear_base)
+    head_pitch_rel: float      # Degrees relative to resting posture (down = positive)
+    d_pitch_dt: float          # Head nodding velocity / jerk (degrees/second)
+    head_yaw_rel: float        # Degrees relative to resting posture (right = positive)
+    blink_rate: float          # Blinks/second over rolling buffer
+    blink_duration: float      # Mean blink closure duration (seconds)
+
+    # Backward compatibility properties for HUD / overlays
+    @property
+    def ear_left(self) -> float:
+        return self.ear_left_rel
+
+    @property
+    def ear_right(self) -> float:
+        return self.ear_right_rel
+
+    @property
+    def ear_avg(self) -> float:
+        return self.ear_avg_rel
+
+    @property
+    def perclos(self) -> float:
+        return self.perclos_calib
+
+    @property
+    def head_pitch(self) -> float:
+        return self.head_pitch_rel
+
+    @property
+    def head_yaw(self) -> float:
+        return self.head_yaw_rel
 
     def to_numpy(self) -> np.ndarray:
-        """Return as a float32 array of shape (8,)."""
+        """Return as a float32 array of shape (12,)."""
         return np.array(
-            [self.ear_left, self.ear_right, self.ear_avg,
-             self.mar, self.perclos,
-             self.head_pitch, self.head_yaw,
-             self.blink_rate],
+            [
+                self.ear_left_rel,
+                self.ear_right_rel,
+                self.ear_avg_rel,
+                self.d_ear_dt,
+                self.mar,
+                self.d_mar_dt,
+                self.perclos_calib,
+                self.head_pitch_rel,
+                self.d_pitch_dt,
+                self.head_yaw_rel,
+                self.blink_rate,
+                self.blink_duration,
+            ],
             dtype=np.float32,
         )
 
@@ -268,33 +307,64 @@ class FeatureExtractor:
     -----
     extractor = FeatureExtractor()
     features  = extractor.extract(face_landmarks)   # call once per frame
-    vec       = features.to_numpy()                 # → shape (8,)
+    vec       = features.to_numpy()                 # → shape (12,)
     """
 
     def __init__(
         self,
-        ear_threshold: float = Config.EAR_THRESHOLD,
+        ear_base: float = 0.30,
+        pitch_base: float = 0.0,
+        yaw_base: float = 0.0,
+        ear_threshold: float | None = None,
         window_size: int = Config.WINDOW_SIZE,
-        fps: float = 30.0,
+        fps: float = Config.TARGET_FPS,
     ) -> None:
-        self.ear_threshold = ear_threshold
+        self.ear_base   = max(float(ear_base), 0.15)
+        self.pitch_base = float(pitch_base)
+        self.yaw_base   = float(yaw_base)
+        if ear_threshold is not None:
+            self.ear_threshold = float(ear_threshold)
+        else:
+            self.ear_threshold = self.ear_base * Config.EAR_CALIB_MULTIPLIER
+
         self.window_size = window_size
         self.fps = fps
         self._head_pose = HeadPoseEstimator()
 
-        # Rolling buffer: stores EAR_avg for last `window_size` frames
+        # Rolling buffer: stores raw EAR_avg for PERCLOS
         self._ear_buffer: deque[float] = deque(maxlen=window_size)
 
-        # Blink detection state machine
+        # Differential velocity state
+        self._prev_ear_avg: float | None = None
+        self._prev_mar: float | None = None
+        self._prev_pitch: float | None = None
+
+        # Blink detection & duration state machine
         self._blink_count: int = 0
         self._eye_closed: bool = False
+        self._blink_start_frame: int | None = None
         self._blink_timestamps: deque[float] = deque(maxlen=window_size)
+        self._blink_durations: deque[float] = deque(maxlen=window_size)
         self._frame_index: int = 0
 
     # ------------------------------------------------------------------
+    def update_baseline(
+        self,
+        ear_base: float,
+        pitch_base: float = 0.0,
+        yaw_base: float = 0.0,
+    ) -> None:
+        """Update personal resting baseline values from calibration."""
+        self.ear_base   = max(float(ear_base), 0.15)
+        self.ear_threshold = self.ear_base * Config.EAR_CALIB_MULTIPLIER
+        self.pitch_base = float(pitch_base)
+        self.yaw_base   = float(yaw_base)
+
+    # ------------------------------------------------------------------
     def update_threshold(self, ear_threshold: float) -> None:
-        """Update EAR threshold (called after adaptive calibration)."""
-        self.ear_threshold = ear_threshold
+        """Update EAR threshold (backward compatibility)."""
+        self.ear_threshold = float(ear_threshold)
+        self.ear_base = max(self.ear_threshold / max(Config.EAR_CALIB_MULTIPLIER, 0.1), 0.15)
 
     # ------------------------------------------------------------------
     def extract(
@@ -304,53 +374,64 @@ class FeatureExtractor:
         frame_h: int = 480,
     ) -> FrameFeatures:
         """
-        Compute all features for the current frame.
-
-        Parameters
-        ----------
-        face_landmarks : mediapipe NormalizedLandmarkList
-            `.landmark` attribute containing 468 points.
-        frame_w, frame_h : int
-            Pixel dimensions of the source image. Required for accurate head
-            pose estimation. Defaults to a common webcam resolution.
-
-        Returns
-        -------
-        FrameFeatures namedtuple
+        Compute all 12 kinematic features for the current frame.
         """
         lm = face_landmarks.landmark
 
-        # --- Eye Aspect Ratios ---
+        # --- Raw Geometry ---
         ear_l = compute_ear(lm, _LEFT_EYE)
         ear_r = compute_ear(lm, _RIGHT_EYE)
         ear_avg = (ear_l + ear_r) / 2.0
-
-        # --- Mouth Aspect Ratio ---
         mar = compute_mar(lm)
+        pitch, yaw = self._head_pose.estimate(face_landmarks, frame_w, frame_h)
 
-        # --- Update rolling buffer ---
+        # --- Differential Velocities ---
+        dt = 1.0 / max(self.fps, 1.0)
+        d_ear = 0.0 if self._prev_ear_avg is None else (ear_avg - self._prev_ear_avg) / dt
+        d_mar = 0.0 if self._prev_mar is None else (mar - self._prev_mar) / dt
+        d_pitch = 0.0 if self._prev_pitch is None else (pitch - self._prev_pitch) / dt
+
+        self._prev_ear_avg = ear_avg
+        self._prev_mar = mar
+        self._prev_pitch = pitch
+
+        # --- Relative Kinematics (Zero Train-Serve Skew) ---
+        denom_ear = max(self.ear_base, 0.15)
+        ear_l_rel = ear_l / denom_ear
+        ear_r_rel = ear_r / denom_ear
+        ear_avg_rel = ear_avg / denom_ear
+        pitch_rel = pitch - self.pitch_base
+        yaw_rel = yaw - self.yaw_base
+
+        # --- Rolling Buffer Update ---
         self._ear_buffer.append(ear_avg)
         self._frame_index += 1
 
-        # --- PERCLOS ---
+        # --- Calibrated PERCLOS ---
         perclos = self._compute_perclos()
 
-        # --- Blink detection ---
+        # --- Blink State & Duration Tracking ---
         self._update_blink_state(ear_avg)
         blink_rate = self._compute_blink_rate()
 
-        # --- Head pose ---
-        pitch, yaw = self._head_pose.estimate(face_landmarks, frame_w, frame_h)
+        if len(self._blink_durations) > 0:
+            blink_dur = float(np.mean(self._blink_durations))
+        else:
+            blink_dur = 0.15  # normal human blink duration is ~0.15s
 
         return FrameFeatures(
-            ear_left=ear_l,
-            ear_right=ear_r,
-            ear_avg=ear_avg,
+            ear_left_rel=ear_l_rel,
+            ear_right_rel=ear_r_rel,
+            ear_avg_rel=ear_avg_rel,
+            d_ear_dt=d_ear,
             mar=mar,
-            perclos=perclos,
-            head_pitch=pitch,
-            head_yaw=yaw,
+            d_mar_dt=d_mar,
+            perclos_calib=perclos,
+            head_pitch_rel=pitch_rel,
+            d_pitch_dt=d_pitch,
+            head_yaw_rel=yaw_rel,
             blink_rate=blink_rate,
+            blink_duration=blink_dur,
         )
 
     # ------------------------------------------------------------------
@@ -359,7 +440,12 @@ class FeatureExtractor:
         self._ear_buffer.clear()
         self._blink_count = 0
         self._eye_closed = False
+        self._blink_start_frame = None
         self._blink_timestamps.clear()
+        self._blink_durations.clear()
+        self._prev_ear_avg = None
+        self._prev_mar = None
+        self._prev_pitch = None
         self._frame_index = 0
 
     # ------------------------------------------------------------------
@@ -369,7 +455,7 @@ class FeatureExtractor:
     def _compute_perclos(self) -> float:
         """
         PERCLOS = fraction of frames in buffer where EAR_avg < threshold.
-        Returns 0.0 if buffer not yet full enough to be meaningful.
+        Returns 0.0 if buffer has fewer than 2 frames.
         """
         if len(self._ear_buffer) < 2:
             return 0.0
@@ -378,17 +464,23 @@ class FeatureExtractor:
 
     def _update_blink_state(self, ear_avg: float) -> None:
         """
-        Simple two-state blink detector:
-        closed → open transition = one blink.
-        Avoids double-counting sustained closure (drowsy state).
+        Two-state blink detector with duration calculation.
         """
         is_closed = ear_avg < self.ear_threshold
         if is_closed and not self._eye_closed:
             self._eye_closed = True
+            self._blink_start_frame = self._frame_index
         elif not is_closed and self._eye_closed:
             self._eye_closed = False
             self._blink_count += 1
             self._blink_timestamps.append(self._frame_index)
+            if self._blink_start_frame is not None:
+                dur_frames = self._frame_index - self._blink_start_frame
+                dur_sec = dur_frames / max(self.fps, 1.0)
+                # Valid physiological blink duration: 40ms to 2.5s
+                if 0.04 <= dur_sec <= 2.5:
+                    self._blink_durations.append(dur_sec)
+                self._blink_start_frame = None
 
     def _compute_blink_rate(self) -> float:
         """
@@ -396,7 +488,6 @@ class FeatureExtractor:
         """
         if len(self._blink_timestamps) < 2:
             return 0.0
-        # Frames spanned by the blink history currently in buffer
         span_frames = self._blink_timestamps[-1] - self._blink_timestamps[0]
         if span_frames < 1:
             return 0.0

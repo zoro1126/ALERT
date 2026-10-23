@@ -121,72 +121,114 @@ class TestComputeEAR:
 
 
 # ---------------------------------------------------------------------------
-# FrameFeatures.to_numpy
+# FrameFeatures.to_numpy (12 Kinematic Channels)
 # ---------------------------------------------------------------------------
 
 class TestFrameFeatures:
     def test_to_numpy_shape_dtype(self):
-        ff = FrameFeatures(0.3, 0.31, 0.305, 0.1, 0.0, -5.2, 3.1, 0.4)
+        ff = FrameFeatures(
+            ear_left_rel=1.0,
+            ear_right_rel=1.02,
+            ear_avg_rel=1.01,
+            d_ear_dt=0.05,
+            mar=0.15,
+            d_mar_dt=-0.01,
+            perclos_calib=0.0,
+            head_pitch_rel=-5.2,
+            d_pitch_dt=1.2,
+            head_yaw_rel=3.1,
+            blink_rate=0.4,
+            blink_duration=0.18,
+        )
         arr = ff.to_numpy()
-        assert arr.shape == (8,)
+        assert arr.shape == (12,)
         assert arr.dtype == np.float32
 
-    def test_values_preserved(self):
-        ff = FrameFeatures(0.25, 0.26, 0.255, 0.55, 0.12, -10.0, 5.0, 0.8)
+    def test_values_and_backward_compatible_properties(self):
+        ff = FrameFeatures(
+            ear_left_rel=0.95,
+            ear_right_rel=0.96,
+            ear_avg_rel=0.955,
+            d_ear_dt=-0.5,
+            mar=0.55,
+            d_mar_dt=0.1,
+            perclos_calib=0.12,
+            head_pitch_rel=-10.0,
+            d_pitch_dt=2.5,
+            head_yaw_rel=5.0,
+            blink_rate=0.8,
+            blink_duration=0.22,
+        )
         arr = ff.to_numpy()
-        assert arr[5] == pytest.approx(-10.0, abs=1e-4)
-        assert arr[6] == pytest.approx(5.0, abs=1e-4)
+        assert arr[7] == pytest.approx(-10.0, abs=1e-4)   # head_pitch_rel
+        assert arr[9] == pytest.approx(5.0, abs=1e-4)     # head_yaw_rel
+        assert arr[11] == pytest.approx(0.22, abs=1e-4)   # blink_duration
+
+        # Test backward-compatible property access
+        assert ff.ear_left == pytest.approx(0.95)
+        assert ff.ear_right == pytest.approx(0.96)
+        assert ff.ear_avg == pytest.approx(0.955)
+        assert ff.perclos == pytest.approx(0.12)
+        assert ff.head_pitch == pytest.approx(-10.0)
+        assert ff.head_yaw == pytest.approx(5.0)
 
 
 # ---------------------------------------------------------------------------
-# FeatureExtractor — PERCLOS and blink rate
+# FeatureExtractor — PERCLOS, Velocities, and Baseline Calibration
 # ---------------------------------------------------------------------------
 
 class TestFeatureExtractor:
-    def _make_extractor(self, threshold=0.25, window=20, fps=15.0):
-        return FeatureExtractor(ear_threshold=threshold, window_size=window, fps=fps)
+    def _make_extractor(self, ear_base=0.30, window=20, fps=15.0):
+        return FeatureExtractor(ear_base=ear_base, window_size=window, fps=fps)
 
     def test_perclos_all_open(self):
-        """PERCLOS should be 0 when all EARs are above threshold."""
-        fe = self._make_extractor(threshold=0.25, window=10)
+        """PERCLOS should be 0 when all EARs are above 0.75 * ear_base."""
+        fe = self._make_extractor(ear_base=0.30, window=10)
+        # 0.75 * 0.30 = 0.225; 0.35 is above threshold
         for _ in range(10):
-            fe._ear_buffer.append(0.35)  # above threshold
+            fe._ear_buffer.append(0.35)
             fe._frame_index += 1
         assert fe._compute_perclos() == pytest.approx(0.0)
 
     def test_perclos_all_closed(self):
         """PERCLOS should be 1.0 when all EARs are below threshold."""
-        fe = self._make_extractor(threshold=0.25, window=10)
+        fe = self._make_extractor(ear_base=0.30, window=10)
         for _ in range(10):
-            fe._ear_buffer.append(0.10)  # below threshold
+            fe._ear_buffer.append(0.10)  # below 0.225
             fe._frame_index += 1
         assert fe._compute_perclos() == pytest.approx(1.0)
 
-    def test_blink_detection_count(self):
-        """5 open→close→open cycles should register 5 blinks."""
-        fe = self._make_extractor(threshold=0.25, window=60, fps=15)
+    def test_blink_detection_and_duration(self):
+        """5 open→close→open cycles should register 5 blinks with durations recorded."""
+        fe = self._make_extractor(ear_base=0.30, window=60, fps=15)
         for _ in range(5):
             fe._update_blink_state(0.10)  # closed
-            fe._frame_index += 1
-            fe._blink_timestamps.append(fe._frame_index)
-            fe._update_blink_state(0.35)  # open  (triggers count)
+            fe._frame_index += 2          # stayed closed for 2 frames (2/15 = 0.133s)
+            fe._update_blink_state(0.35)  # open (triggers completion)
             fe._frame_index += 1
         assert fe._blink_count == 5
+        assert len(fe._blink_durations) == 5
+        assert np.mean(fe._blink_durations) == pytest.approx(2 / 15.0, abs=1e-3)
 
     def test_reset_clears_state(self):
         fe = self._make_extractor()
         fe._ear_buffer.append(0.1)
         fe._blink_count = 3
+        fe._prev_ear_avg = 0.25
         fe._frame_index = 99
         fe.reset()
         assert len(fe._ear_buffer) == 0
         assert fe._blink_count == 0
+        assert fe._prev_ear_avg is None
         assert fe._frame_index == 0
 
-    def test_update_threshold(self):
-        fe = self._make_extractor(threshold=0.25)
-        fe.update_threshold(0.20)
-        assert fe.ear_threshold == pytest.approx(0.20)
+    def test_update_baseline(self):
+        fe = self._make_extractor(ear_base=0.30)
+        fe.update_baseline(ear_base=0.40, pitch_base=5.0, yaw_base=-2.0)
+        assert fe.ear_base == pytest.approx(0.40)
+        assert fe.ear_threshold == pytest.approx(0.30)  # 0.40 * 0.75
+        assert fe.pitch_base == pytest.approx(5.0)
+        assert fe.yaw_base == pytest.approx(-2.0)
 
 
 # ---------------------------------------------------------------------------

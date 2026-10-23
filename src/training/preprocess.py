@@ -35,25 +35,25 @@ from __future__ import annotations
 
 import numpy as np
 
-# Physical and biological bounds per feature column
-# 0: EAR_L, 1: EAR_R, 2: EAR_avg, 3: MAR, 4: PERCLOS, 5: Pitch, 6: Yaw, 7: Blink_rate
+# Physical and biological bounds per 12-channel feature column:
+# 0: ear_left_rel, 1: ear_right_rel, 2: ear_avg_rel, 3: d_ear_dt
+# 4: mar, 5: d_mar_dt, 6: perclos_calib
+# 7: head_pitch_rel, 8: d_pitch_dt, 9: head_yaw_rel
+# 10: blink_rate, 11: blink_duration
 CLIP_BOUNDS: dict[int, tuple[float, float]] = {
-    0: (0.0,   0.6),    # EAR_L
-    1: (0.0,   0.6),    # EAR_R
-    2: (0.0,   0.6),    # EAR_avg
-    3: (0.0,   0.8),    # MAR  — biological max at full yawn ~0.7
-    # 4: PERCLOS is bounded [0, 1] by definition
-    5: (-60.0, 60.0),   # Head Pitch (degrees) — genuine nodding is within ±45°
-    6: (-90.0, 90.0),   # Head Yaw (degrees)   — genuine turns are within ±60°
-    7: (0.0,   4.0),    # Blink rate (blinks/s) — normal ~0.2-1.0; 4.0 is ceiling
+    0:  (0.0,    2.5),    # ear_left_rel (relative to personal baseline)
+    1:  (0.0,    2.5),    # ear_right_rel
+    2:  (0.0,    2.5),    # ear_avg_rel
+    3:  (-10.0, 10.0),    # d_ear_dt (eye velocity: 1/s)
+    4:  (0.0,    1.2),    # mar (biological max at full yawn ~0.8-1.0)
+    5:  (-10.0, 10.0),    # d_mar_dt (mouth opening velocity: 1/s)
+    6:  (0.0,    1.0),    # perclos_calib [0, 1]
+    7:  (-60.0, 60.0),    # head_pitch_rel (degrees relative to resting baseline)
+    8:  (-180.0, 180.0),  # d_pitch_dt (head nodding jerk: deg/s)
+    9:  (-60.0, 60.0),    # head_yaw_rel (degrees relative to resting baseline)
+    10: (0.0,    4.0),    # blink_rate (blinks/s)
+    11: (0.0,    3.0),    # blink_duration (mean duration in seconds)
 }
-
-# EAR columns — these receive adaptive window normalization
-_EAR_COLS = (0, 1, 2)
-
-# Minimum denominator for EAR normalization to prevent division-by-zero on
-# frames with fully closed / occluded eyes (e.g. glasses glare)
-_EAR_MIN_DENOM = 0.15
 
 
 def clip_window(window: np.ndarray) -> np.ndarray:
@@ -66,72 +66,36 @@ def clip_window(window: np.ndarray) -> np.ndarray:
     return window
 
 
-def adaptive_ear_normalization(window: np.ndarray) -> np.ndarray:
-    """
-    Normalize EAR channels by the 90th-percentile of each EAR column within
-    the window, making EAR invariant to subject anatomy and camera distance.
-
-    Rationale
-    ---------
-    In a 60-frame (~4s) window, genuine blinks occupy 2–5 frames (<10%).
-    The 90th-percentile of EAR approximates the "wide-open eye baseline" for
-    that specific subject in that specific clip. Dividing by this value:
-      - Collapses all subjects to a common [0, ~1.0] open-eye scale.
-      - Preserves the fatigue signal (progressive EAR decline toward 0).
-      - Handles glasses, makeup, ethnicity, and individual anatomy differences.
-    
-    A minimum clamp of 0.15 prevents division by near-zero on frames where
-    mediapipe loses tracking (e.g. side profiles, occlusion).
-    """
-    for col in _EAR_COLS:
-        if col >= window.shape[1]:
-            continue
-        p90 = float(np.percentile(window[:, col], 90))
-        denom = max(p90, _EAR_MIN_DENOM)
-        window[:, col] = window[:, col] / denom
-    return window
-
-
 def center_head_pose(window: np.ndarray) -> np.ndarray:
     """
-    Zero-center head Pitch (col 5) and Yaw (col 6) relative to window median.
-
-    Static camera mounting angles create an artificial baseline offset:
-        observed_angle(t) = camera_offset + head_angle(t)
-
-    Subtracting the median removes the fixed camera offset C:
-        observed(t) - median(observed) ≈ head_angle(t) - median(head_angle)
-
-    This eliminates camera-angle memorization across subjects while preserving
-    nodding dynamics and head slumps.
+    Zero-center residual head Pitch (col 7) and Yaw (col 9) relative to window median.
+    Removes residual mounting offsets across recordings.
     """
-    if window.shape[1] > 5:
-        # Col 5: Pitch
-        median_pitch = float(np.median(window[:, 5]))
-        window[:, 5] -= median_pitch
+    if window.shape[1] > 7:
+        median_pitch = float(np.median(window[:, 7]))
+        window[:, 7] -= median_pitch
 
-    if window.shape[1] > 6:
-        # Col 6: Yaw
-        median_yaw = float(np.median(window[:, 6]))
-        window[:, 6] -= median_yaw
+    if window.shape[1] > 9:
+        median_yaw = float(np.median(window[:, 9]))
+        window[:, 9] -= median_yaw
 
     return window
 
 
 def preprocess_window(window: np.ndarray) -> np.ndarray:
     """
-    Full preprocessing pipeline applied to a single (T, F) window before
-    z-score normalization. Order matters:
+    Full preprocessing pipeline applied to a single (T, 12) window before
+    z-score normalization.
 
-      1. Outlier clipping            — remove tracker failures / gimbal lock
-      2. Adaptive EAR normalization  — subject-anatomy invariance [NEW FIX]
-      3. Pose median centering        — static camera-angle invariance
+    Order:
+      1. Outlier clipping      — physical biological limits
+      2. Residual pose centering — eliminates residual camera mount offsets
 
-    This pipeline is applied identically during training AND real-time inference
-    to guarantee no train/inference domain mismatch.
+    NOTE: EAR is calibrated against the true personal baseline in FeatureExtractor,
+    completely eliminating the window-p90 blindness bug.
     """
     out = window.copy()
     out = clip_window(out)
-    out = adaptive_ear_normalization(out)  # FIX: window-relative EAR scaling
     out = center_head_pose(out)
     return out
+
