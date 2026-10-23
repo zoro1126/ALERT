@@ -1,0 +1,242 @@
+{
+  "01": {
+    "ear_base": 0.18352,
+    "pitch_base": -46.86,
+    "yaw_base": -67.16
+  },
+  "02": {
+    "ear_base": 0.18,
+    "pitch_base": -45.71,
+    "yaw_base": -58.88
+  },
+  "03": {
+    "ear_base": 0.19157,
+    "pitch_base": -4.64,
+    "yaw_base": 42.35
+  },
+  "04": {
+    "ear_base": 0.45,
+    "pitch_base": 22.23,
+    "yaw_base": 15.43
+  },
+  "05": {
+    "ear_base": 0.2108,
+    "pitch_base": -6.55,
+    "yaw_base": 58.96
+  },
+  "06": {
+    "ear_base": 0.45,
+    "pitch_base": 1.94,
+    "yaw_base": 25.72
+  },
+  "07": {
+    "ear_base": 0.18,
+    "pitch_base": -20.2,
+    "yaw_base": 45.78
+  },
+  "08": {
+    "ear_base": 0.21982,
+    "pitch_base": 2.01,
+    "yaw_base": 39.08
+  },
+  "09": {
+    "ear_base": 0.19178,
+    "pitch_base": -23.78,
+    "yaw_base": 50.78
+  },
+  "10": {
+    "ear_base": 0.18,
+    "pitch_base": -1.05,
+    "yaw_base": 40.47
+  },
+  "11": {
+    "ear_base": 0.45,
+    "pitch_base": 22.05,
+    "yaw_base": 19.64
+  },
+  "12": {
+    "ear_base": 0.45,
+    "pitch_base": 16.93,
+    "yaw_base": 15.38
+  },
+  "13": {
+    "ear_base": 0.21015,
+    "pitch_base": -2.37,
+    "yaw_base": 34.57
+  },
+  "14": {
+    "ear_base": 0.18126,
+    "pitch_base": -10.13,
+    "yaw_base": 42.27
+  },
+  "15": {
+    "ear_base": 0.4419,
+    "pitch_base": 18.38,
+    "yaw_base": 29.26
+  },
+  "16": {
+    "ear_base": 0.21656,
+    "pitch_base": -37.17,
+    "yaw_base": 59.68
+  },
+  "17": {
+    "ear_base": 0.27789,
+    "pitch_base": 12.84,
+    "yaw_base": 34.99
+  },
+  "18": {
+    "ear_base": 0.40194,
+    "pitch_base": 14.36,
+    "yaw_base": 27.61
+  },
+  "19": {
+    "ear_base": 0.18,
+    "pitch_base": -16.65,
+    "yaw_base": 66.06
+  },
+  "20": {
+    "ear_base": 0.45,
+    "pitch_base": 14.13,
+    "yaw_base": 18.84
+  },
+  "21": {
+    "ear_base": 0.18,
+    "pitch_base": 1.14,
+    "yaw_base": 25.96
+  },
+  "22": {
+    "ear_base": 0.18,
+    "pitch_base": -10.21,
+    "yaw_base": 48.02
+  },
+  "23": {
+    "ear_base": 0.45,
+    "pitch_base": 33.44,
+    "yaw_base": 9.13
+  },
+  "24": {
+    "ear_base": 0.45,
+    "pitch_base": 22.14,
+    "yaw_base": 26.01
+  },
+  "25": {
+    "ear_base": 0.18297,
+    "pitch_base": 0.83,
+    "yaw_base": 59.53
+  },
+  "26": {
+    "ear_base": 0.45,
+    "pitch_base": 30.16,
+    "yaw_base": 7.12
+  },
+  "27": {
+    "ear_base": 0.19446,
+    "pitch_base": 32.78,
+    "yaw_base": 39.38
+  },
+  "28": {
+    "ear_base": 0.18,
+    "pitch_base": -39.34,
+    "yaw_base": 66.74
+  },
+  "29": {
+    "ear_base": 0.45,
+    "pitch_base": 20.48,
+    "yaw_base": 31.13
+  },
+  "30": {
+    "ear_base": 0.18,
+    "pitch_base": -8.16,
+    "yaw_base": 57.53
+  },
+  "31": {
+    "ear_base": 0.20361,
+    "pitch_base": -38.88,
+    "yaw_base": -45.93
+  },
+  "32": {
+    "ear_base": 0.18,
+    "pitch_base": -35.27,
+    "yaw_base": -67.66
+  },
+  "33": {
+    "ear_base": 0.18,
+    "pitch_base": -6.07,
+    "yaw_base": 54.9
+  },
+  "34": {
+    "ear_base": 0.38091,
+    "pitch_base": 12.55,
+    "yaw_base": 31.73
+  },
+  "35": {
+    "ear_base": 0.18,
+    "pitch_base": -52.56,
+    "yaw_base": 49.46
+  },
+  "36": {
+    "ear_base": 0.45,
+    "pitch_base": 24.86,
+    "yaw_base": 24.81
+  },
+  "37": {
+    "ear_base": 0.36712,
+    "pitch_base": 18.66,
+    "yaw_base": 43.95
+  },
+  "38": {
+    "ear_base": 0.18,
+    "pitch_base": -4.66,
+    "yaw_base": 48.57
+  },
+  "39": {
+    "ear_base": 0.45,
+    "pitch_base": 8.43,
+    "yaw_base": 23.86
+  },
+  "40": {
+    "ear_base": 0.45,
+    "pitch_base": 19.25,
+    "yaw_base": 27.32
+  },
+  "41": {
+    "ear_base": 0.18,
+    "pitch_base": -11.68,
+    "yaw_base": 42.86
+  },
+  "42": {
+    "ear_base": 0.18,
+    "pitch_base": -9.07,
+    "yaw_base": 63.92
+  },
+  "43": {
+    "ear_base": 0.18,
+    "pitch_base": -0.46,
+    "yaw_base": 42.35
+  },
+  "44": {
+    "ear_base": 0.39747,
+    "pitch_base": 22.3,
+    "yaw_base": 42.64
+  },
+  "45": {
+    "ear_base": 0.45,
+    "pitch_base": -1.69,
+    "yaw_base": 36.62
+  },
+  "46": {
+    "ear_base": 0.3,
+    "pitch_base": 0.0,
+    "yaw_base": 0.0
+  },
+  "47": {
+    "ear_base": 0.18882,
+    "pitch_base": -1.04,
+    "yaw_base": 52.9
+  },
+  "48": {
+    "ear_base": 0.18,
+    "pitch_base": 9.23,
+    "yaw_base": 28.22
+  }
+}
