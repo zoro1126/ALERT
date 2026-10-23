@@ -114,6 +114,33 @@ def _run_calibration(
 
 
 # ---------------------------------------------------------------------------
+# Camera initialization helper
+# ---------------------------------------------------------------------------
+
+def _open_camera(camera_idx: int) -> cv2.VideoCapture:
+    """
+    Open cv2.VideoCapture for the given camera_idx.
+    If the requested index fails, falls back across standard indices (1, 0).
+    """
+    candidates = [camera_idx] + [idx for idx in (1, 0) if idx != camera_idx]
+    for idx in candidates:
+        cap = cv2.VideoCapture(idx)
+        if cap.isOpened():
+            if idx != camera_idx:
+                print(f"[ALERT] Camera index {camera_idx} unavailable; fell back to camera index {idx}.")
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH,  Config.CAMERA_WIDTH)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
+            return cap
+        cap.release()
+
+    import glob
+    available = sorted(glob.glob("/dev/video*"))
+    hint = (f"  Available: {', '.join(available)}"
+            if available else "  No /dev/video* devices found.")
+    raise RuntimeError(f"Cannot open camera index {camera_idx} (tried {candidates})\n{hint}")
+
+
+# ---------------------------------------------------------------------------
 # Main detection loop
 # ---------------------------------------------------------------------------
 
@@ -132,11 +159,7 @@ def run(
     show_fps   : draw FPS counter on HUD
     """
     # --- Camera ---
-    cap = cv2.VideoCapture(camera_idx)
-    if not cap.isOpened():
-        raise RuntimeError(f"Cannot open camera index {camera_idx}")
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  Config.CAMERA_WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
+    cap = _open_camera(camera_idx)
 
     frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -242,15 +265,8 @@ def run_demo(
 
     Press Q to quit.
     """
-    cap = cv2.VideoCapture(camera_idx)
-    if not cap.isOpened():
-        import glob
-        available = sorted(glob.glob("/dev/video*"))
-        hint = (f"  Available: {', '.join(available)} → try --camera 1"
-                if available else "  No /dev/video* devices found.")
-        raise RuntimeError(f"Cannot open camera index {camera_idx}\n{hint}")
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  Config.CAMERA_WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
+    # --- Camera ---
+    cap = _open_camera(camera_idx)
 
     frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

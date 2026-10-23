@@ -89,11 +89,20 @@ class RealTimeClassifier:
             )
         ckpt = torch.load(path, map_location=self.device, weights_only=False)
         cfg  = ckpt.get("config", {})
-        arch = cfg.get("arch", "cnn_gru")
+        arch = cfg.get("arch", "bigru")
         model_kwargs = {
             k: v for k, v in cfg.items()
             if k not in ("arch", "parameters", "n_features", "n_classes")
         }
+
+        # Legacy checkpoint support: remap fc1 -> head.0, fc_out -> head.3 if needed
+        state_dict = dict(ckpt.get("model_state", {}))
+        if "fc1.weight" in state_dict and "head.0.weight" not in state_dict:
+            state_dict["head.0.weight"] = state_dict.pop("fc1.weight")
+            state_dict["head.0.bias"] = state_dict.pop("fc1.bias")
+        if "fc_out.weight" in state_dict and "head.3.weight" not in state_dict:
+            state_dict["head.3.weight"] = state_dict.pop("fc_out.weight")
+            state_dict["head.3.bias"] = state_dict.pop("fc_out.bias")
 
         try:
             model = build_model(
@@ -102,7 +111,7 @@ class RealTimeClassifier:
                 n_classes=cfg.get("n_classes", Config.N_CLASSES),
                 **model_kwargs,
             ).to(self.device)
-            model.load_state_dict(ckpt["model_state"])
+            model.load_state_dict(state_dict)
         except Exception:
             # Fallback for legacy checkpoints
             model = FatigueClassifier(
@@ -112,7 +121,7 @@ class RealTimeClassifier:
                 fc_size=cfg.get("fc_size", Config.FC_SIZE),
                 n_classes=cfg.get("n_classes", Config.N_CLASSES),
             ).to(self.device)
-            model.load_state_dict(ckpt["model_state"])
+            model.load_state_dict(state_dict)
 
         model.eval()
         return model

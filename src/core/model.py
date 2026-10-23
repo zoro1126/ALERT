@@ -142,6 +142,26 @@ class BiGRUAttention(BaseEdgeModel):
             elif "head" in name and param.dim() == 2:
                 nn.init.xavier_uniform_(param)
 
+    def _load_from_state_dict(
+        self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
+    ):
+        """Remap legacy checkpoint keys: fc1 -> head.0, fc_out -> head.3."""
+        legacy_remap = [
+            ("fc1.weight", "head.0.weight"),
+            ("fc1.bias", "head.0.bias"),
+            ("fc_out.weight", "head.3.weight"),
+            ("fc_out.bias", "head.3.bias"),
+        ]
+        for old_k, new_k in legacy_remap:
+            old_full = prefix + old_k
+            new_full = prefix + new_k
+            if old_full in state_dict and new_full not in state_dict:
+                state_dict[new_full] = state_dict.pop(old_full)
+
+        super()._load_from_state_dict(
+            state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
+        )
+
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         h1, _ = self.bigru1(x)
         h1 = self.drop_rnn(h1)
