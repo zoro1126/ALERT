@@ -27,6 +27,7 @@ from __future__ import annotations
 from collections import deque
 from pathlib import Path
 from typing import NamedTuple
+import warnings
 
 import numpy as np
 import torch
@@ -292,6 +293,12 @@ class EnsembleFatigueClassifier:
         if model_paths is None:
             models_path_obj = Path(models_dir)
             model_paths = sorted(models_path_obj.glob("ensemble_*.pt"))
+            if not model_paths:
+                for sub in ("phase3", "phase2"):
+                    sub_paths = sorted((models_path_obj / sub).glob("*.pt"))
+                    if sub_paths:
+                        model_paths = sub_paths
+                        break
             if not model_paths:
                 model_paths = sorted(models_path_obj.glob("*.pt"))
 

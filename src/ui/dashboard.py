@@ -109,8 +109,8 @@ def _run_calibration(
 
         if result.face_landmarks:
             adapted = _LandmarkAdapter(result.face_landmarks[0])
-            ear_l = compute_ear(adapted, _LEFT_EYE)
-            ear_r = compute_ear(adapted, _RIGHT_EYE)
+            ear_l = compute_ear(adapted.landmark, _LEFT_EYE)
+            ear_r = compute_ear(adapted.landmark, _RIGHT_EYE)
             live_ear = (ear_l + ear_r) / 2.0
             live_pitch, live_yaw = extractor._head_pose.estimate(adapted, w, h)
             cal.add_frame(live_ear, live_pitch, live_yaw)

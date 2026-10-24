@@ -56,6 +56,11 @@ def main() -> None:
         help="Directory containing trained ensemble checkpoints (ensemble_*.pt).",
     )
     parser.add_argument(
+        "--ensemble",
+        action="store_true",
+        help="Run heterogeneous ensemble mode across checkpoints in --models-dir.",
+    )
+    parser.add_argument(
         "--camera", "-c",
         type=int,
         default=Config.CAMERA_INDEX,
@@ -99,7 +104,7 @@ def main() -> None:
         return
 
     # Determine mode: Single Checkpoint vs Heterogeneous Ensemble
-    model_path = Path(args.model) if args.model else None
+    model_path = Path(args.model) if args.model and not args.ensemble else None
     models_dir = Path(args.models_dir)
 
     if model_path is not None:
@@ -109,6 +114,15 @@ def main() -> None:
         mode_str = f"Single Checkpoint ({model_path.name})"
     else:
         ensemble_ckpts = list(models_dir.glob("ensemble_*.pt"))
+        if not ensemble_ckpts:
+            # Check subdirectories (e.g. models/phase3 or models/phase2)
+            for sub in ("phase3", "phase2"):
+                sub_ckpts = list((models_dir / sub).glob("*.pt"))
+                if sub_ckpts:
+                    ensemble_ckpts = sub_ckpts
+                    models_dir = models_dir / sub
+                    break
+
         if not ensemble_ckpts:
             # Fall back to default MODEL_PATH if no ensemble ckpts found
             if Config.MODEL_PATH.exists():

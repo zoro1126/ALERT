@@ -95,6 +95,15 @@ class _LandmarkAdapter:
             self._LM(lm.x, lm.y, lm.z) for lm in normalized_landmarks
         ]
 
+    def __getitem__(self, idx: int) -> _LM:
+        return self.landmark[idx]
+
+    def __len__(self) -> int:
+        return len(self.landmark)
+
+    def __iter__(self):
+        return iter(self.landmark)
+
 
 # ---------------------------------------------------------------------------
 # Baseline extraction (from Alert video)
