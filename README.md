@@ -65,56 +65,26 @@ Traditional DMS solutions rely on either computationally prohibitive 3D-CNNs/YOL
 
 ```mermaid
 flowchart TD
-    subgraph SENSOR [" 📷 Live Video Capture "]
-        CAM["Standard USB / Laptop Webcam<br>(720p @ 30 FPS)"] --> MP["Google MediaPipe Tasks FaceLandmarker<br>(468 3D Landmarks · XNNPACK CPU Delegate · ~15 ms)"]
+    CAM["Webcam (720p @ 30 FPS)"] --> MP["MediaPipe FaceLandmarker (468 3D Landmarks)"]
+    MP --> FEAT["12-Channel Kinematic Extractor (EAR, MAR, Pitch, Velocities)"]
+    FEAT --> CAL["Personal Baseline Normalization (EAR_base, Pitch_base)"]
+    CAL --> BUF["Sliding Window Buffer (T=120 Frames / 8.0s)"]
+    
+    subgraph Ensemble ["Heterogeneous Model Ensemble"]
+        BUF --> M1["HybridCNNGRU (18.1k params)"]
+        BUF --> M2["TCNClassifier (96.5k params)"]
+        BUF --> M3["BiGRUAttention (38.0k params)"]
+        M1 & M2 & M3 --> FUSE["Soft-Voting Probability Fusion"]
     end
-
-    subgraph KINEMATICS [" 📐 12-Channel Kinematic Feature Pipeline "]
-        MP --> FEAT["Instantaneous Feature Extraction"]
-        FEAT --> K1["Eyelid Dynamics:<br>EAR_left, EAR_right, EAR_avg"]
-        FEAT --> K2["First-Order Physical Velocities:<br>ΔEAR/Δt, ΔMAR/Δt, ΔPitch/Δt"]
-        FEAT --> K3["Facial Action Units:<br>MAR, Head Pitch/Yaw (solvePnP), Calibrated PERCLOS (P60)"]
-        FEAT --> K4["Temporal Statistics:<br>Blink Frequency & Mean Blink Duration"]
-    end
-
-    subgraph CALIB [" 🎯 15-Second Personal Calibration "]
-        K1 & K2 & K3 & K4 --> NORM["Personal Resting Baseline Scaling<br>EAR_rel = EAR / EAR_base  ·  Pitch_rel = Pitch - Pitch_base"]
-    end
-
-    subgraph BUFFER [" ⏱️ Temporal Horizon Buffer "]
-        NORM --> BUF["Sliding Window Buffer (T=120 Frames / 8.0s @ 15 FPS)"]
-    end
-
-    subgraph ENSEMBLE [" 🧠 Heterogeneous Neural Ensemble Suite "]
-        BUF --> M1["HybridCNNGRU<br>(18,131 params)<br>Conv1D + GRU + Attention<br>★ Local Blink Kinematics Expert"]
-        BUF --> M2["TCNClassifier<br>(96,499 params)<br>5 Causal Dilated Residual Blocks<br>★ Long-Range Horizon Expert"]
-        BUF --> M3["BiGRUAttention<br>(37,971 params)<br>Bidirectional GRU + 4-Head Attention<br>★ Transition Dynamics Expert"]
-        M1 & M2 & M3 --> FUSE["Soft-Voting Probability Fusion<br>P_bar(c) = (1/M) ∑ P_m(c)"]
-    end
-
-    subgraph FILTER [" 📈 Online Temporal Filtering & State Machine "]
-        FUSE --> EMA["Online Exponential Moving Average (EMA)<br>P_smooth = α·P_t + (1 - α)·P_prev (α = 0.35)"]
-        EMA --> SM{"Two-Tier Debounced State Machine"}
-        SM -->|"P(Alert) ≥ 0.50"| ST1["🟢 NORMAL<br>HUD Green · System Safe"]
-        SM -->|"P(LowVig) ≥ 0.50 (≥ 3.0s)"| ST2["🟡 WARNING<br>HUD Yellow · Gentle Chime"]
-        SM -->|"P(Drowsy) ≥ 0.45 (≥ 1.5s)"| ST3["🔴 CRITICAL<br>HUD Red · Emergency Siren"]
-    end
-
-    subgraph OUTPUT [" 🖥️ Telemetry HUD & Audio Output "]
-        ST1 & ST2 & ST3 --> HUD["OpenCV HUD Telemetry Overlay & Pygame Procedural Audio"]
-    end
-
-    classDef sensor fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef feature fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
-    classDef calib fill:#fff3e0,stroke:#e65100,stroke-width:2px;
-    classDef ensemble fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef state fill:#fbe9e7,stroke:#c62828,stroke-width:2px;
-
-    class CAM,MP sensor;
-    class FEAT,K1,K2,K3,K4,BUF feature;
-    class NORM calib;
-    class M1,M2,M3,FUSE ensemble;
-    class EMA,SM,ST1,ST2,ST3,HUD state;
+    
+    FUSE --> EMA["Online EMA Low-Pass Filter (α = 0.35)"]
+    EMA --> SM{"Debounced State Machine"}
+    
+    SM -->|"P(Alert) ≥ 0.50"| ST1["NORMAL (Safe)"]
+    SM -->|"P(LowVig) ≥ 0.50 (≥ 3.0s)"| ST2["WARNING (Chime)"]
+    SM -->|"P(Drowsy) ≥ 0.45 (≥ 1.5s)"| ST3["CRITICAL (Siren)"]
+    
+    ST1 & ST2 & ST3 --> OUT["Live Telemetry HUD & Audio Output"]
 ```
 
 ---
@@ -208,14 +178,12 @@ Evaluated across **1,000 continuous inference iterations** on $T=120, F=12$ slid
 
 ```mermaid
 flowchart LR
-    START([System Launch]) --> CHECK{"Profile exists at<br>~/.alert/calibration.json?"}
-    CHECK -->|Yes| LOAD["Load Calibrated Profile<br>(EAR_base, Pitch_base)"]
-    CHECK -->|No / --recalibrate| CALIB["Run 15-Second Routine<br>(Keep eyes open naturally)"]
-    CALIB --> COMPUTE["Compute Median EAR & Pitch"]
-    COMPUTE --> SAVE["Save to ~/.alert/calibration.json"]
-    SAVE --> LOOP["Start Real-Time Inference Loop"]
-    LOAD --> LOOP
-    LOOP --> HUD["Render Live HUD & Telemetry"]
+    A[Launch] --> B{Profile Exists?}
+    B -->|Yes| C[Load ~/.alert/calibration.json]
+    B -->|No / --recalibrate| D[15s Calibration Routine]
+    D --> E[Save Profile]
+    E --> F[Inference Loop]
+    C --> F
 ```
 
 ---
@@ -302,21 +270,11 @@ python src/run_alert.py --no-fps
 
 ```mermaid
 stateDiagram-v2
-    [*] --> NORMAL: System Active
-    
-    NORMAL --> MONITOR_LOW: P(LowVig) ≥ 0.50
-    MONITOR_LOW --> NORMAL: P(Alert) ≥ 0.50
-    MONITOR_LOW --> WARNING: Sustained ≥ 3.0s (45 frames)
-    
+    [*] --> NORMAL
+    NORMAL --> WARNING: P(LowVig) ≥ 0.50 (≥ 3.0s)
+    NORMAL --> CRITICAL: P(Drowsy) ≥ 0.45 (≥ 1.5s)
+    WARNING --> CRITICAL: P(Drowsy) ≥ 0.45 (≥ 1.5s)
     WARNING --> NORMAL: P(Alert) ≥ 0.50
-    
-    NORMAL --> MONITOR_DROWSY: P(Drowsy) ≥ 0.45
-    MONITOR_LOW --> MONITOR_DROWSY: P(Drowsy) ≥ 0.45
-    WARNING --> MONITOR_DROWSY: P(Drowsy) ≥ 0.45
-    
-    MONITOR_DROWSY --> NORMAL: P(Alert) ≥ 0.50
-    MONITOR_DROWSY --> CRITICAL: Sustained ≥ 1.5s (22 frames)
-    
     CRITICAL --> NORMAL: P(Alert) ≥ 0.50
 ```
 
