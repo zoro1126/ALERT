@@ -23,8 +23,6 @@ uta-reallife-drowsiness-dataset/
 face_landmarker.task
 fatigue_classifier.joblib
 node_modules/
-research/
-misc/
 
 # IDE / OS
 .vscode/
