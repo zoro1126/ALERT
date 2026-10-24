@@ -1,32 +1,46 @@
-# ALERT: Adaptive Landmark Eye-state & Reaction-Time
-### Edge-Native Driver Fatigue & Micro-Sleep Detection via 12-Channel Kinematic Dynamics & Heterogeneous Neural Ensembles
+<div align="center">
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg)](https://www.python.org/)
-[![PyTorch 2.x](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![MediaPipe Tasks](https://img.shields.io/badge/MediaPipe-FaceLandmarker%203D-009688.svg?logo=google&logoColor=white)](https://developers.google.com/mediapipe)
-[![Edge Latency](https://img.shields.io/badge/CPU%20Latency-15.30%20ms%20(65.3%20FPS)-success.svg)](#hardware-latency--edge-pareto-frontier)
-[![Tests Passing](https://img.shields.io/badge/tests-57%2F57%20passing-brightgreen.svg)](#running-automated-tests)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+# 🚨 A.L.E.R.T. 🚨
+### Adaptive Landmark Eye-state & Reaction-Time
+**Edge-Native Driver Fatigue & Micro-Sleep Detection via 12-Channel Kinematic Dynamics & Heterogeneous Neural Ensembles**
+
+<p align="center">
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-3776AB.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch"></a>
+  <a href="https://developers.google.com/mediapipe"><img src="https://img.shields.io/badge/MediaPipe-FaceLandmarker%203D-009688.svg?style=for-the-badge&logo=google&logoColor=white" alt="MediaPipe"></a>
+  <a href="#hardware-latency--edge-pareto-frontier"><img src="https://img.shields.io/badge/CPU%20Latency-15.30%20ms%20(65.3%20FPS)-2EA44F.svg?style=for-the-badge&logo=speedtest&logoColor=white" alt="Latency"></a>
+  <a href="#running-automated-tests"><img src="https://img.shields.io/badge/Tests-57%2F57%20Passing-brightgreen.svg?style=for-the-badge&logo=pytest&logoColor=white" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
+</p>
+
+<p align="center">
+  <b>Zero Cloud Latency · Zero In-Cabin GPU Required · 100% Privacy Preserving · Sub-20ms Edge Response</b>
+</p>
+
+---
 
 > **ALERT (Adaptive Landmark Eye-state & Reaction-Time)** is an enterprise-grade, privacy-preserving driver monitoring system (DMS) engineered to detect the onset of driver fatigue, cognitive drowsiness, and micro-sleeps in real time. Designed for **pure edge CPU execution**, ALERT requires **zero cloud connectivity, zero GPU accelerators, and zero invasive biometric wearables**.
 
----
-
-## Table of Contents
-1. [Key Innovations & Technical Breakthroughs](#key-innovations--technical-breakthroughs)
-2. [End-to-End System Architecture](#end-to-end-system-architecture)
-3. [Empirical Benchmarks & Visual Analytics](#empirical-benchmarks--visual-analytics)
-4. [Hardware Latency & Edge Pareto Frontier](#hardware-latency--edge-pareto-frontier)
-5. [Quick-Start Tutorial & Installation](#quick-start-tutorial--installation)
-6. [Interactive Live HUD & Debounced State Machine](#interactive-live-hud--debounced-state-machine)
-7. [Dataset Engineering & Training from Scratch](#dataset-engineering--training-from-scratch)
-8. [Running Automated Tests](#running-automated-tests)
-9. [Troubleshooting & Platform Notes](#troubleshooting--platform-notes)
-10. [Academic References & Project Information](#academic-references--project-information)
+</div>
 
 ---
 
-## Key Innovations & Technical Breakthroughs
+## 📑 Table of Contents
+
+- [Key Innovations & Technical Breakthroughs](#key-innovations--technical-breakthroughs)
+- [End-to-End System Architecture](#end-to-end-system-architecture)
+- [Empirical Benchmarks & Visual Analytics](#empirical-benchmarks--visual-analytics)
+- [Hardware Latency & Edge Pareto Frontier](#hardware-latency--edge-pareto-frontier)
+- [Quick-Start Tutorial & Installation](#quick-start-tutorial--installation)
+- [Interactive Live HUD & Debounced State Machine](#interactive-live-hud--debounced-state-machine)
+- [Dataset Engineering & Training from Scratch](#dataset-engineering--training-from-scratch)
+- [Running Automated Tests](#running-automated-tests)
+- [Troubleshooting & Platform Notes](#troubleshooting--platform-notes)
+- [Academic References & Project Information](#academic-references--project-information)
+
+---
+
+## 💡 Key Innovations & Technical Breakthroughs
 
 Traditional DMS solutions rely on either computationally prohibitive 3D-CNNs/YOLOs (exceeding edge power budgets) or naive static threshold heuristics ($EAR \le 0.25$) that fail across diverse human populations. ALERT solves these historical pitfalls through five algorithmic innovations:
 
@@ -47,75 +61,82 @@ Traditional DMS solutions rely on either computationally prohibitive 3D-CNNs/YOL
 
 ---
 
-## End-to-End System Architecture
+## 🏛️ End-to-End System Architecture
 
-```
-                                  LIVE SENSOR INPUT
-                                          │
-                         Standard USB / Laptop Webcam Stream (720p @ 30 FPS)
-                                          │
-                                          ▼
-                         Google MediaPipe Tasks FaceLandmarker
-                        (468 Dense 3D Landmarks · XNNPACK CPU Delegate · ~15 ms)
-                                          │
-                                          ▼
-                      12-Channel Kinematic Differential Extractor
-       ┌──────────────────────────────────┴──────────────────────────────────┐
-       │  Relative EAR (Left, Right, Avg)      Eye Velocity (ΔEAR / Δt)      │
-       │  Mouth Aspect Ratio (MAR)            Yawn Expansion Velocity (ΔMAR)│
-       │  Calibrated PERCLOS (P_60)           Head Pitch / Nod Jerk (ΔPitch)│
-       │  Relative Head Yaw (solvePnP)        Blink Rate & Mean Duration    │
-       └──────────────────────────────────┬──────────────────────────────────┘
-                                          │
-                                          ▼
-                       15-Second Personal Baseline Calibration
-                      (EAR_rel = EAR / EAR_base  ·  Pitch_rel = Pitch - Pitch_base)
-                                          │
-                                          ▼
-                      Temporal Sliding Window Buffer (T=120, F=12)
-                           (8.0s Biological Event Horizon)
-                                          │
-                                          ▼
-                   Heterogeneous Neural Ensemble (Soft-Voting Fusion)
-       ┌──────────────────────────────┬──────────────────────────────┐
-       │       HybridCNNGRU           │        TCNClassifier         │       BiGRUAttention
-       │   18,131 Parameters          │      96,499 Parameters       │      37,971 Parameters
-       │   Conv1D + GRU + Attn        │   5 Causal Dilated Blocks    │   BiGRU + 4-Head Attention
-       │  (Blink Kinematics Expert)   │ (Long-Range Horizon Expert)  │  (Bidirectional Transition)
-       └──────────────────────────────┴──────────────────────────────┘
-                                      │
-                                      ▼
-                      Online EMA Low-Pass Filter (α = 0.35)
-                          (P_smooth = α·P_t + (1-α)·P_prev)
-                                      │
-                                      ▼
-                   Deterministic Two-Tier Debounced State Machine
-            ┌─────────────────────────┼─────────────────────────┐
-            │                         │                         │
-     P(Alert) ≥ 0.50          P(LowVig) ≥ 0.50          P(Drowsy) ≥ 0.45
-            │                 (Sustained ≥ 3.0s)        (Sustained ≥ 1.5s)
-            ▼                         ▼                         ▼
-      NORMAL (Green)          WARNING (Yellow)          CRITICAL (Red)
-     HUD Status: Safe         Gentle Audio Chime       Urgent Siren Alarm
+```mermaid
+flowchart TD
+    subgraph SENSOR [" 📷 Live Video Capture "]
+        CAM["Standard USB / Laptop Webcam<br>(720p @ 30 FPS)"] --> MP["Google MediaPipe Tasks FaceLandmarker<br>(468 3D Landmarks · XNNPACK CPU Delegate · ~15 ms)"]
+    end
+
+    subgraph KINEMATICS [" 📐 12-Channel Kinematic Feature Pipeline "]
+        MP --> FEAT["Instantaneous Feature Extraction"]
+        FEAT --> K1["Eyelid Dynamics:<br>EAR_left, EAR_right, EAR_avg"]
+        FEAT --> K2["First-Order Physical Velocities:<br>ΔEAR/Δt, ΔMAR/Δt, ΔPitch/Δt"]
+        FEAT --> K3["Facial Action Units:<br>MAR, Head Pitch/Yaw (solvePnP), Calibrated PERCLOS (P60)"]
+        FEAT --> K4["Temporal Statistics:<br>Blink Frequency & Mean Blink Duration"]
+    end
+
+    subgraph CALIB [" 🎯 15-Second Personal Calibration "]
+        K1 & K2 & K3 & K4 --> NORM["Personal Resting Baseline Scaling<br>EAR_rel = EAR / EAR_base  ·  Pitch_rel = Pitch - Pitch_base"]
+    end
+
+    subgraph BUFFER [" ⏱️ Temporal Horizon Buffer "]
+        NORM --> BUF["Sliding Window Buffer (T=120 Frames / 8.0s @ 15 FPS)"]
+    end
+
+    subgraph ENSEMBLE [" 🧠 Heterogeneous Neural Ensemble Suite "]
+        BUF --> M1["HybridCNNGRU<br>(18,131 params)<br>Conv1D + GRU + Attention<br>★ Local Blink Kinematics Expert"]
+        BUF --> M2["TCNClassifier<br>(96,499 params)<br>5 Causal Dilated Residual Blocks<br>★ Long-Range Horizon Expert"]
+        BUF --> M3["BiGRUAttention<br>(37,971 params)<br>Bidirectional GRU + 4-Head Attention<br>★ Transition Dynamics Expert"]
+        M1 & M2 & M3 --> FUSE["Soft-Voting Probability Fusion<br>P_bar(c) = (1/M) ∑ P_m(c)"]
+    end
+
+    subgraph FILTER [" 📈 Online Temporal Filtering & State Machine "]
+        FUSE --> EMA["Online Exponential Moving Average (EMA)<br>P_smooth = α·P_t + (1 - α)·P_prev (α = 0.35)"]
+        EMA --> SM{"Two-Tier Debounced State Machine"}
+        SM -->|"P(Alert) ≥ 0.50"| ST1["🟢 NORMAL<br>HUD Green · System Safe"]
+        SM -->|"P(LowVig) ≥ 0.50 (≥ 3.0s)"| ST2["🟡 WARNING<br>HUD Yellow · Gentle Chime"]
+        SM -->|"P(Drowsy) ≥ 0.45 (≥ 1.5s)"| ST3["🔴 CRITICAL<br>HUD Red · Emergency Siren"]
+    end
+
+    subgraph OUTPUT [" 🖥️ Telemetry HUD & Audio Output "]
+        ST1 & ST2 & ST3 --> HUD["OpenCV HUD Telemetry Overlay & Pygame Procedural Audio"]
+    end
+
+    classDef sensor fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef feature fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef calib fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef ensemble fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef state fill:#fbe9e7,stroke:#c62828,stroke-width:2px;
+
+    class CAM,MP sensor;
+    class FEAT,K1,K2,K3,K4,BUF feature;
+    class NORM calib;
+    class M1,M2,M3,FUSE ensemble;
+    class EMA,SM,ST1,ST2,ST3,HUD state;
 ```
 
 ---
 
-## Empirical Benchmarks & Visual Analytics
+## 📊 Empirical Benchmarks & Visual Analytics
 
 All models were evaluated on the **UTA Real-Life Drowsiness Dataset (UTA-RLDD)** under **Strict Subject-Independent Cross-Validation** (GroupKFold by Subject ID, zero data leakage).
 
 ### 1. Physiological Baseline Disparity (Why Static Thresholds Fail)
 The distribution of resting eye aspect ratio ($EAR_{\text{base}}$) across 48 unique subjects ranges from **$0.1800$ to $0.4500$** ($2.50\times$ anatomical variance).
 
-![Cross-Subject Physiological Baseline Variance](logs/plots/baseline_variance.png)
-
-*Figure 1: Resting EAR across subjects. Normalizing against personal resting baselines guarantees universal calibration regardless of facial geometry.*
+<div align="center">
+  <img src="logs/plots/baseline_variance.png" alt="Cross-Subject Physiological Baseline Variance" width="850">
+  <p><em>Figure 1: Resting EAR across subjects. Normalizing against personal resting baselines guarantees universal calibration regardless of facial geometry.</em></p>
+</div>
 
 ---
 
 ### 2. Cross-Validation Holdout Leaderboard
 Holdout performance across 9 independently trained ensemble models on completely unseen test subjects:
+
+<div align="center">
 
 | Model Checkpoint | Neural Architecture | Holdout Partition | Holdout Macro-F1 | Holdout Accuracy | Alert F1 | LowVig F1 | Drowsy F1 | Checkpoint Size |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -130,31 +151,40 @@ Holdout performance across 9 independently trained ensemble models on completely
 | `ensemble_bigru_fold3.pt` | `BiGRUAttention` | Fold 3 | **`0.5472`** | 54.63% | 0.5826 | 0.4311 | 0.6280 | 0.145 MB |
 | **Ensemble Average** | — | — | **`0.5236`** | **52.56%** | **0.5203** | **0.4483** | **0.5965** | **Total: 2.35 MB** |
 
-*Note: In naturalistic, subject-independent 3-class fatigue detection, the published academic ceiling on UTA-RLDD is $52\%–58\%$ Macro-F1 (Ghoddoosian et al.). ALERT exceeds this benchmark with peak single-model F1 of **`0.6062`** and ensemble average of **`0.5236`**.*
+</div>
+
+> 📌 **Benchmark Insight**: In naturalistic, subject-independent 3-class fatigue detection, the published academic ceiling on UTA-RLDD is $52\%–58\%$ Macro-F1 (Ghoddoosian et al.). ALERT exceeds this benchmark with peak single-model F1 of **`0.6062`** and ensemble average of **`0.5236`**.
 
 ---
 
 ### 3. Empirical Training Dynamics & Confusion Matrix
 
-| Convergence Dynamics (Loss & Accuracy) | Multi-Metric F1 & Confusion Matrix |
+<div align="center">
+
+| Training Convergence Dynamics | Multi-Metric F1 & Confusion Matrix |
 |:---:|:---:|
-| ![Loss Trajectories](logs/plots/loss_curve.png)<br>*(a) Training & Validation Loss Stability* | ![Holdout Confusion Matrix](logs/plots/confusion_matrix.png)<br>*(b) Holdout Class Separation Matrix* |
-| ![Accuracy Progression](logs/plots/accuracy_curve.png)<br>*(c) Epoch Accuracy Curves* | ![F1 Dynamics](logs/plots/f1_curves.png)<br>*(d) Per-Class F1 Progression* |
+| <img src="logs/plots/loss_curve.png" alt="Loss Trajectories" width="420"><br>*(a) Training & Validation Loss Stability* | <img src="logs/plots/confusion_matrix.png" alt="Holdout Confusion Matrix" width="420"><br>*(b) Holdout Class Separation Matrix* |
+| <img src="logs/plots/accuracy_curve.png" alt="Accuracy Progression" width="420"><br>*(c) Epoch Accuracy Curves* | <img src="logs/plots/f1_curves.png" alt="F1 Dynamics" width="420"><br>*(d) Per-Class F1 Progression* |
+
+</div>
 
 ---
 
 ### 4. Triad Architectural Radar Comparison
 Each architecture in the triad excels at distinct physiological signatures:
 
-![Architecture Comparison Radar Chart](logs/plots/architecture_comparison.png)
-
-*Figure 2: Architectural comparison. `HybridCNNGRU` dominates Alert recall; `TCNClassifier` dominates long-range Drowsy detection; `BiGRUAttention` provides balanced transition modeling.*
+<div align="center">
+  <img src="logs/plots/architecture_comparison.png" alt="Architecture Comparison Radar Chart" width="750">
+  <p><em>Figure 2: Architectural comparison. <code>HybridCNNGRU</code> dominates Alert recall; <code>TCNClassifier</code> dominates long-range Drowsy detection; <code>BiGRUAttention</code> provides balanced transition modeling.</em></p>
+</div>
 
 ---
 
-## Hardware Latency & Edge Pareto Frontier
+## ⚡ Hardware Latency & Edge Pareto Frontier
 
 Evaluated across **1,000 continuous inference iterations** on $T=120, F=12$ sliding window inputs:
+
+<div align="center">
 
 | Model Architecture | Parameters | Disk Checkpoint | CPU Mean Latency | CPU Median Latency | CPU Throughput | GPU Latency (RTX 3050) | Edge Compliant ($\le 30\text{ ms}$)? |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -163,13 +193,32 @@ Evaluated across **1,000 continuous inference iterations** on $T=120, F=12$ slid
 | **`TCNClassifier`** | 96,499 | 0.368 MB | 51.43 ms | 49.66 ms | 19.4 FPS | 12.36 ms (80.9 FPS) | Yes (GPU Recommended) |
 | **Full 9-Model Ensemble** | **610,404** | **2.35 MB** | 511.65 ms | 520.64 ms | 2.0 FPS | **80.73 ms** (**12.4 FPS**) | **YES (GPU Real-Time)** |
 
-![Latency Accuracy Pareto Frontier](logs/plots/latency_pareto.png)
+</div>
 
-*Figure 3: Pareto Frontier. Single `HybridCNNGRU` achieves strict real-time CPU edge compliance at 15.30 ms, while the 9-model ensemble provides maximum robustness at 12.4 FPS on GPU.*
+<div align="center">
+  <img src="logs/plots/latency_pareto.png" alt="Latency Accuracy Pareto Frontier" width="850">
+  <p><em>Figure 3: Pareto Frontier. Single <code>HybridCNNGRU</code> achieves strict real-time CPU edge compliance at 15.30 ms, while the 9-model ensemble provides maximum robustness at 12.4 FPS on GPU.</em></p>
+</div>
 
 ---
 
-## Quick-Start Tutorial & Installation
+## 🚀 Quick-Start Tutorial & Installation
+
+### Calibration & Runtime Lifecycle
+
+```mermaid
+flowchart LR
+    START([System Launch]) --> CHECK{"Profile exists at<br>~/.alert/calibration.json?"}
+    CHECK -->|Yes| LOAD["Load Calibrated Profile<br>(EAR_base, Pitch_base)"]
+    CHECK -->|No / --recalibrate| CALIB["Run 15-Second Routine<br>(Keep eyes open naturally)"]
+    CALIB --> COMPUTE["Compute Median EAR & Pitch"]
+    COMPUTE --> SAVE["Save to ~/.alert/calibration.json"]
+    SAVE --> LOOP["Start Real-Time Inference Loop"]
+    LOAD --> LOOP
+    LOOP --> HUD["Render Live HUD & Telemetry"]
+```
+
+---
 
 ### Step 1 — Clone Repository & Setup Environment
 
@@ -182,7 +231,7 @@ cd ALERT
 python3 -m venv .venv
 source .venv/bin/activate       # On Windows: .venv\Scripts\activate
 
-# Install PyTorch (CPU or CUDA 12.x build)
+# Install PyTorch (CPU build or CUDA 12.x build)
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 # Install remaining dependencies
@@ -249,22 +298,29 @@ python src/run_alert.py --no-fps
 
 ---
 
-## Interactive Live HUD & Debounced State Machine
+## 🖥️ Interactive Live HUD & Debounced State Machine
 
-The OpenCV Head-Up Display (HUD) provides complete real-time driver telemetry without occluding facial features:
+```mermaid
+stateDiagram-v2
+    [*] --> NORMAL: System Active
+    
+    NORMAL --> MONITOR_LOW: P(LowVig) ≥ 0.50
+    MONITOR_LOW --> NORMAL: P(Alert) ≥ 0.50
+    MONITOR_LOW --> WARNING: Sustained ≥ 3.0s (45 frames)
+    
+    WARNING --> NORMAL: P(Alert) ≥ 0.50
+    
+    NORMAL --> MONITOR_DROWSY: P(Drowsy) ≥ 0.45
+    MONITOR_LOW --> MONITOR_DROWSY: P(Drowsy) ≥ 0.45
+    WARNING --> MONITOR_DROWSY: P(Drowsy) ≥ 0.45
+    
+    MONITOR_DROWSY --> NORMAL: P(Alert) ≥ 0.50
+    MONITOR_DROWSY --> CRITICAL: Sustained ≥ 1.5s (22 frames)
+    
+    CRITICAL --> NORMAL: P(Alert) ≥ 0.50
+```
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ [NORMAL] Alert (89.4%)          [9-Model Ensemble: CPU]        31.2 FPS│
-├──────────────────────────┬─────────────────────────────┬───────────────┤
-│ KINEMATICS               │ CLASS PROBABILITIES         │ ATTENTION     │
-│  EAR:  0.318 (rel: 1.01) │  Alert:    [████████░░] 89% │  [Strip]      │
-│  ΔEAR: +0.002            │  LowVig:   [█░░░░░░░░░] 08% │  Frame 0..120 │
-│  MAR:  0.082 (rel: 0.88) │  Drowsy:   [░░░░░░░░░░] 03% │  Heatmap      │
-│  Pitch:+34.2° (rel:-1.6°)│                             │               │
-│  Blinks: 14/min (180ms)  │ State: SECURE               │               │
-└──────────────────────────┴─────────────────────────────┴───────────────┘
-```
+<div align="center">
 
 ### Alarm State Transition Rules
 
@@ -274,9 +330,11 @@ The OpenCV Head-Up Display (HUD) provides complete real-time driver telemetry wi
 | **WARNING** | **Amber Yellow** | Gentle Single Chime (440 Hz) | $\hat{P}(\text{LowVig}) \ge 0.50$ sustained for $\ge 3.0\text{ s}$ | Early fatigue warning; prompts driver to rest. |
 | **CRITICAL** | **Urgent Red** | Pulsing Two-Tone Siren (880 Hz / 440 Hz) | $\hat{P}(\text{Drowsy}) \ge 0.45$ sustained for $\ge 1.5\text{ s}$ | Active emergency alert; awakens driver immediately. |
 
+</div>
+
 ---
 
-## Dataset Engineering & Training from Scratch
+## 🛠️ Dataset Engineering & Training from Scratch
 
 To retrain the complete 9-model ensemble suite on the **UTA-RLDD** dataset:
 
@@ -308,7 +366,7 @@ Checkpoints will be saved to `models/ensemble_{arch}_fold{k}.pt` and summary log
 
 ---
 
-## Running Automated Tests
+## 🧪 Running Automated Tests
 
 ALERT includes a comprehensive 57-test validation suite covering feature math, PnP pose estimation, ordinal losses, model roundtrips, and live integration:
 
@@ -330,12 +388,12 @@ tests/test_pipeline_integration.py::test_ensemble_loading PASSED          [ 50%]
 tests/test_pipeline_integration.py::test_calibration_profile_roundtrip PASSED [ 80%]
 tests/test_pipeline_integration.py::test_alarm_state_machine PASSED        [100%]
 
-======================== 57 passed in 2.75s ========================
+======================== 57 passed in 2.38s ========================
 ```
 
 ---
 
-## Troubleshooting & Platform Notes
+## 🔧 Troubleshooting & Platform Notes
 
 - **Camera Device Node Fallback**: On Linux systems where `/dev/video0` is a restricted metadata node, ALERT automatically catches the `ioctl` failure and falls back to `/dev/video1`. You can also manually specify index via `--camera 1`.
 - **Pygame Mixer Audio**: ALERT uses procedural sound generation via `pygame.mixer`. If running in a minimal container without audio drivers, sound alerts degrade gracefully to visual HUD alerts without crashing.
@@ -343,7 +401,7 @@ tests/test_pipeline_integration.py::test_alarm_state_machine PASSED        [100%
 
 ---
 
-## Academic References & Project Information
+## 📚 Academic References & Project Information
 
 ```bibtex
 @article{ghoddoosian2021realistic,
@@ -363,13 +421,16 @@ tests/test_pipeline_integration.py::test_alarm_state_machine PASSED        [100%
 }
 ```
 
-### Institutional Information
-- **Course**: Minor Project | Course Code: `1010063491`
-- **Project ID**: `CE_AIML_31`
-- **Institution**: Department of Computer Engineering, College of Technology, Silver Oak University
-- **Team**: Prem Deshani, Kavya Kothari, Mehulsinh Rathod
-- **Faculty Guide**: Ms. Vishwa Patel | **HOD**: Dr. Vikas Tulshyan
+<div align="center">
+
+### Institutional & Academic Attribution
+**Course**: Minor Project | **Course Code**: `1010063491` | **Project ID**: `CE_AIML_31`  
+**Department**: Computer Engineering, College of Technology, Silver Oak University  
+**Authors**: Prem Deshani, Kavya Kothari, Mehulsinh Rathod  
+**Project Guide**: Ms. Vishwa Patel | **HOD**: Dr. Vikas Tulshyan
 
 ---
 
 *ALERT is an academic and industrial research prototype. Always pull over in a designated safe resting area if experiencing fatigue while operating a motor vehicle.*
+
+</div>
