@@ -35,7 +35,7 @@ from utils.config import Config
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="ALERT -- Adaptive Landmark Eye-state & Reaction-Time "
+        description="ALERT -- Automated Landmark-based Eye and Response Tracker "
                     "Driver Fatigue Detection System",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )

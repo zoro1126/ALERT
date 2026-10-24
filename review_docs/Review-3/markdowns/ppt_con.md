@@ -14,7 +14,7 @@
 
 **Course Name:** Minor Project  
 **Course Code:** 1010063491  
-**Project Title:** A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time) — Driver Fatigue Detection System  
+**Project Title:** A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker) — Driver Fatigue Detection System  
 **Presentation Phase:** Review-3 (Final Project Evaluation & Defense)
 
 | Detail | Information |

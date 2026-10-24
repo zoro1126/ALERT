@@ -49,7 +49,7 @@ These are the 10 most relevant and prevalent papers in driver drowsiness/fatigue
 
 ### SYSTEM PROMPT: Build ALERT — A Real-Time Driver Fatigue Detection System
 
-You are building **ALERT** (Adaptive Landmark Eye-state & Reaction-Time fatigue detection) — a complete, production-quality, software-only driver fatigue detection system. There is no hardware component; this must run on a consumer laptop using only a webcam and standard CPU. The entire runtime must stay **under 2 GB RAM**.
+You are building **ALERT** (Automated Landmark-based Eye and Response Tracker fatigue detection) — a complete, production-quality, software-only driver fatigue detection system. There is no hardware component; this must run on a consumer laptop using only a webcam and standard CPU. The entire runtime must stay **under 2 GB RAM**.
 
 ---
 

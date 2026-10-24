@@ -1,5 +1,5 @@
 # Monthly Project Progress Report
-## Project A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time)
+## Project A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker)
 
 * **Reporting Period:** August 08, 2026 – September 19, 2026 (6 Weeks)
 * **Academic Program:** B.Tech. Computer Engineering (Artificial Intelligence & Machine Learning)

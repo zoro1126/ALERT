@@ -1,5 +1,5 @@
 # ALERT: Machine Learning Engineering & Training Challenges Logbook
-**Project:** Adaptive Landmark Eye-state & Reaction-Time (ALERT) Driver Fatigue Detection System  
+**Project:** Automated Landmark-based Eye and Response Tracker (ALERT) Driver Fatigue Detection System  
 **Dataset:** UTA Real-Life Drowsiness Dataset (UTA-RLDD, 60 subjects, 141 genuine video recordings)  
 **Hardware:** NVIDIA GeForce RTX 3050 6GB Laptop GPU (CUDA + AMP fp16) | Host CPU (Single-thread inference)  
 **Edge Compliance Limits:** Parameters $< 250{,}000$ | CPU Latency $\le 15.0–30.0\text{ ms}$ | Disk Footprint $< 2.0\text{ MB}$  

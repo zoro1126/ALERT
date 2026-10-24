@@ -1,6 +1,6 @@
 # Silver Oak College of Engineering and Technology
 ## B.Tech CE Minor Project (Phase I) — Periodic Review Reports
-### Project A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time)
+### Project A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker)
 
 * **Month 1: 08/08/2026 to 19/09/2026 – Scan Copy Link:** `[Scan Copy Link / Drive URL]`
 * **Week 1: 20/09/2026 to 26/09/2026 – Scan Copy Link:** `[Scan Copy Link / Drive URL]`
@@ -18,7 +18,7 @@
 * **3. Department:** Computer Engineering (AI & ML)
 * **4. Group/Individual:** Group (Project ID: CE_AIML_31)
 * **5. Minor Project Phase:** Minor Project Phase I
-* **6. Project Title:** A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time)
+* **6. Project Title:** A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker)
 * **7. Name of the Guide:** Ms. Vishwa Patel
 * **8. Name of the Co-Guide (if any):** N/A
 * **9. Month No. & Dates:** Month 1: 08/08/2026 to 19/09/2026
@@ -91,7 +91,7 @@
 * **3. Department:** Computer Engineering (AI & ML)
 * **4. Group/Individual:** Group (Project ID: CE_AIML_31)
 * **5. Minor Project Phase:** Minor Project Phase I
-* **6. Project Title:** A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time)
+* **6. Project Title:** A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker)
 * **7. Name of the Guide:** Ms. Vishwa Patel
 * **8. Name of the Co-Guide (if any):** N/A
 * **9. Week No. & Dates:** Week 1: 20/09/2026 to 26/09/2026

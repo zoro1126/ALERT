@@ -1,7 +1,7 @@
 # ADVANCED PROGRAMMING WITH PROJECT-I / MINOR PROJECT REPORT
 ## Entitled
 
-# A.L.E.R.T. (ADAPTIVE LANDMARK EYE-STATE & REACTION-TIME): A LANDMARK-BASED, FULLY OFFLINE DRIVER FATIGUE MONITOR WITH PERSONALISED CALIBRATION AND HETEROGENEOUS DEEP ENSEMBLE
+# A.L.E.R.T. (AUTOMATED LANDMARK-BASED EYE AND RESPONSE TRACKER): A LANDMARK-BASED, FULLY OFFLINE DRIVER FATIGUE MONITOR WITH PERSONALISED CALIBRATION AND HETEROGENEOUS DEEP ENSEMBLE
 
 Submitted by:  
 **KAVYA KOTHARI – 2301030600045**  
@@ -28,7 +28,7 @@ Academic Year: 2026–2027 (October, 2026)
 ### Department of Computer Engineering (AI & ML)
 
 ### CERTIFICATE
-This is to certify that **Kavya Kothari (2301030600045)**, **Prem Deshani (2301030600043)**, and **Mehulsinh Rathod (2301030600049)** have submitted the Minor Project Report (Review-3) entitled **"A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time): A Landmark-Based, Fully Offline Driver Fatigue Monitor with Personalised Calibration and Heterogeneous Deep Ensemble"** in partial fulfillment of the requirements for the award of the degree of **Bachelor of Technology in Computer Engineering (AI & ML)** of Silver Oak University, Ahmedabad, during the academic year 2026–2027.
+This is to certify that **Kavya Kothari (2301030600045)**, **Prem Deshani (2301030600043)**, and **Mehulsinh Rathod (2301030600049)** have submitted the Minor Project Report (Review-3) entitled **"A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker): A Landmark-Based, Fully Offline Driver Fatigue Monitor with Personalised Calibration and Heterogeneous Deep Ensemble"** in partial fulfillment of the requirements for the award of the degree of **Bachelor of Technology in Computer Engineering (AI & ML)** of Silver Oak University, Ahmedabad, during the academic year 2026–2027.
 
 | | |
 | :---: | :---: |
@@ -40,7 +40,7 @@ This is to certify that **Kavya Kothari (2301030600045)**, **Prem Deshani (23010
 ---
 
 ### DECLARATION
-We hereby declare that the Minor Project Report entitled **"A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time)"** submitted to Silver Oak University, Ahmedabad, is an authentic record of original project work carried out by us at the College of Technology under the guidance and supervision of **Ms. Vishwa Patel**.
+We hereby declare that the Minor Project Report entitled **"A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker)"** submitted to Silver Oak University, Ahmedabad, is an authentic record of original project work carried out by us at the College of Technology under the guidance and supervision of **Ms. Vishwa Patel**.
 
 We further declare that this report has not been submitted previously, in part or in full, to this or any other university for the award of any degree or diploma. All materials, figures, datasets, and literature cited herein have been duly acknowledged and referenced according to academic integrity standards.
 
@@ -69,7 +69,7 @@ We also express our indebtedness to the researchers at the University of Texas a
 ### ABSTRACT
 Driver fatigue and micro-sleep lapses are implicated in over $20\%$ of fatal vehicular collisions globally. While camera-based Driver Monitoring Systems (DMS) provide non-intrusive surveillance, existing academic and industrial solutions suffer from three fundamental architectural flaws: severe latency and privacy risks associated with cloud streaming, catastrophic train-serve skew caused by natural anatomical eye variance across drivers, and mode-collapse on naturalistic benchmark datasets caused by symmetric loss penalties over an intrinsically ordinal biological spectrum.
 
-This project delivers **ALERT (Adaptive Landmark Eye-state & Reaction-Time)**, a fully offline, edge-compliant driver fatigue monitor engineered for real-time monocular deployment on consumer automotive CPUs. ALERT captures video streams via standard webcams ($640\times 480$ @ $15\text{ FPS}$), extracting 478 3D facial landmarks using the MediaPipe Face Landmarker task. The system synthesizes a 12-dimensional kinematic feature vector ($F=12$) combining normalized aperture ratios, differential velocities ($\Delta\text{EAR}$, $\Delta\text{MAR}$, $\Delta\text{Pitch}$), and event metrics over an expanded 120-frame ($8.0\text{ s}$) biological event horizon.
+This project delivers **ALERT (Automated Landmark-based Eye and Response Tracker)**, a fully offline, edge-compliant driver fatigue monitor engineered for real-time monocular deployment on consumer automotive CPUs. ALERT captures video streams via standard webcams ($640\times 480$ @ $15\text{ FPS}$), extracting 478 3D facial landmarks using the MediaPipe Face Landmarker task. The system synthesizes a 12-dimensional kinematic feature vector ($F=12$) combining normalized aperture ratios, differential velocities ($\Delta\text{EAR}$, $\Delta\text{MAR}$, $\Delta\text{Pitch}$), and event metrics over an expanded 120-frame ($8.0\text{ s}$) biological event horizon.
 
 To eliminate anatomical bias stemming from the observed $0.1800$ to $0.4500$ ($2.50\times$) resting eye aspect ratio spread across human subjects, ALERT implements an automated 15-second personal baseline calibration ($EAR / EAR_{\text{base}}$). To overcome the central attractor collapse observed in early training, an **Ordinal Distance-Penalized Focal Loss** ($\lambda_{\text{ord}}=0.35, \gamma=2.0, \epsilon=0.08$) was formulated to quadratically penalize safety-critical opposite-extreme errors.
 
@@ -122,7 +122,7 @@ On the naturalistic **UTA-RLDD** benchmark (60 subjects, 141 videos, 26,050 cali
 
 | Abbreviation | Expanded Form |
 |---|---|
-| **ALERT** | Adaptive Landmark Eye-state & Reaction-Time |
+| **ALERT** | Automated Landmark-based Eye and Response Tracker |
 | **AMP** | Automatic Mixed Precision (PyTorch `fp16`) |
 | **BiGRU** | Bidirectional Gated Recurrent Unit |
 | **CAN** | Controller Area Network (Automotive Bus) |
@@ -228,7 +228,7 @@ On the naturalistic **UTA-RLDD** benchmark (60 subjects, 141 videos, 26,050 cali
 ## CHAPTER 1: INTRODUCTION
 
 ### 1.1 Project Summary
-**ALERT (Adaptive Landmark Eye-state & Reaction-Time)** is an edge-native, monocular computer-vision Driver Monitoring System designed to detect cognitive fatigue, yawning bouts, and micro-sleep events in real time on resource-constrained consumer CPUs. The system processes raw RGB camera video without specialized infrared hardware or cloud offloading, computing a rich 12-channel kinematic feature vector over an expanded 120-frame ($8.0\text{ s}$) biological event horizon. ALERT establishes driver-specific facial geometry via an automated 15-second personal calibration, preventing false alarms caused by anatomical differences. Using a heterogeneous 9-model deep learning ensemble trained with a custom Ordinal Distance-Penalized Focal Loss, ALERT classifies fatigue states into four actionable alert tiers with single-digit millisecond latency.
+**ALERT (Automated Landmark-based Eye and Response Tracker)** is an edge-native, monocular computer-vision Driver Monitoring System designed to detect cognitive fatigue, yawning bouts, and micro-sleep events in real time on resource-constrained consumer CPUs. The system processes raw RGB camera video without specialized infrared hardware or cloud offloading, computing a rich 12-channel kinematic feature vector over an expanded 120-frame ($8.0\text{ s}$) biological event horizon. ALERT establishes driver-specific facial geometry via an automated 15-second personal calibration, preventing false alarms caused by anatomical differences. Using a heterogeneous 9-model deep learning ensemble trained with a custom Ordinal Distance-Penalized Focal Loss, ALERT classifies fatigue states into four actionable alert tiers with single-digit millisecond latency.
 
 ### 1.2 Background and Motivation
 Highway safety statistics consistently identify drowsy driving as a principal catalyst for high-velocity multi-vehicle fatalities. The National Highway Traffic Safety Administration (NHTSA) documents over 91,000 police-reported fatigue collisions annually in the United States, yielding 50,000 severe injuries and 800 fatalities [1]. A 2024 retrospective investigation by the AAA Foundation for Traffic Safety into fatal crashes revealed that $17.6\%$ of all fatal crashes involved drowsy driving [2]. At $100\text{ km/h}$, a vehicle covers $27.8\text{ metres per second}$; an unmitigated 2-second micro-sleep leaves a vehicle unpiloted for $55.6\text{ metres}$.

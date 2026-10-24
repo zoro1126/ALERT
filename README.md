@@ -1,7 +1,7 @@
 <div align="center">
 
 # 🚨 A.L.E.R.T. 🚨
-### Adaptive Landmark Eye-state & Reaction-Time
+### Automated Landmark-based Eye and Response Tracker
 **Edge-Native Driver Fatigue & Micro-Sleep Detection via 12-Channel Kinematic Dynamics & Heterogeneous Neural Ensembles**
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 ---
 
-> **ALERT (Adaptive Landmark Eye-state & Reaction-Time)** is an enterprise-grade, privacy-preserving driver monitoring system (DMS) engineered to detect the onset of driver fatigue, cognitive drowsiness, and micro-sleeps in real time. Designed for **pure edge CPU execution**, ALERT requires **zero cloud connectivity, zero GPU accelerators, and zero invasive biometric wearables**.
+> **ALERT (Automated Landmark-based Eye and Response Tracker)** is an enterprise-grade, privacy-preserving driver monitoring system (DMS) engineered to detect the onset of driver fatigue, cognitive drowsiness, and micro-sleeps in real time. Designed for **pure edge CPU execution**, ALERT requires **zero cloud connectivity, zero GPU accelerators, and zero invasive biometric wearables**.
 
 </div>
 

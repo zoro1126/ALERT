@@ -13,7 +13,7 @@
 
 **Course Name:** Minor Project  
 **Course Code:** 1010063491  
-**Project Title:** A.L.E.R.T. (Adaptive Landmark Eye-state & Reaction-Time)
+**Project Title:** A.L.E.R.T. (Automated Landmark-based Eye and Response Tracker)
 
 | Detail | Information |
 | :--- | :--- |

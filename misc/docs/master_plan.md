@@ -1,7 +1,7 @@
 # ALERT — Extreme Production Master Plan (Heterogeneous Ensemble Architecture)
 
 ## Executive Summary
-This document defines the complete mathematical, algorithmic, and engineering specification to elevate the **ALERT (Adaptive Landmark Eye-state & Reaction-Time)** Driver Fatigue Detection System to the upper academic performance ceiling ($\ge 55\%\text{ Subject-Independent Macro-F1}$) on the **UTA-RLDD** dataset while guaranteeing rock-solid, zero-false-positive live webcam inference.
+This document defines the complete mathematical, algorithmic, and engineering specification to elevate the **ALERT (Automated Landmark-based Eye and Response Tracker)** Driver Fatigue Detection System to the upper academic performance ceiling ($\ge 55\%\text{ Subject-Independent Macro-F1}$) on the **UTA-RLDD** dataset while guaranteeing rock-solid, zero-false-positive live webcam inference.
 
 All design decisions have been resolved through architectural analysis and requirements alignment. Execution proceeds strictly phase-by-phase according to this document.
 

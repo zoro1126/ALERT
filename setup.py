@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="alert",
     version="0.1.0",
-    description="ALERT — Adaptive Landmark Eye-state & Reaction-Time fatigue detection",
+    description="ALERT — Automated Landmark-based Eye and Response Tracker fatigue detection",
     author="Prem",
     python_requires=">=3.10",
     packages=find_packages(where="src"),
